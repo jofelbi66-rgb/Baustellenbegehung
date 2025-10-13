@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Baustellenbegehung",
+  "type": "object",
+  "properties": {
+    "site": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string"
+    },
+    "section": {
+      "type": "string"
+    },
+    "coords": {
+      "type": "string"
+    },
+    "begehungsart": {
+      "enum": [
+        "Erstbegehung",
+        "Folgebegehung",
+        "Abnahme",
+        "Ad-hoc"
+      ]
+    },
+    "date": {
+      "type": "string"
+    },
+    "team": {
+      "type": "string"
+    },
+    "weather": {
+      "type": "string"
+    },
+    "checklist": {
+      "type": "object",
+      "properties": {
+        "psa": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        },
+        "housekeeping": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        },
+        "traffic": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        },
+        "excavation": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        },
+        "scaffolds": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        },
+        "lifting": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        },
+        "machinery": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        },
+        "electrical": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        },
+        "chemicals": {
+          "enum": [
+            "OK",
+            "Mangel",
+            "n. a."
+          ]
+        }
+      }
+    },
+    "defects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "enum": [
+              "gering",
+              "mittel",
+              "hoch",
+              "kritisch"
+            ]
+          },
+          "location": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "due": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "description"
+        ]
+      }
+    },
+    "overall": {
+      "enum": [
+        "i. O.",
+        "i. O. mit Auflagen",
+        "nicht i. O."
+      ]
+    },
+    "sign": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "site",
+    "begehungsart",
+    "date",
+    "overall",
+    "sign"
+  ]
+}
