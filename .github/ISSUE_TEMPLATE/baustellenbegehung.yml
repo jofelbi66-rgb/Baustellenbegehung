@@ -1,0 +1,559 @@
+# Create the repository structure and files, then zip it for download.
+import os, json, textwrap, zipfile, pathlib, io
+
+base = "/mnt/data/baustellenbegehung"
+paths = [
+    "docs",
+    "data/schemas",
+    "scripts",
+    "reports",
+    ".github/ISSUE_TEMPLATE",
+    ".github/workflows",
+]
+
+for p in paths:
+    os.makedirs(os.path.join(base, p), exist_ok=True)
+
+# README.md
+readme = textwrap.dedent("""
+# Baustellenbegehung (GitHub-Issue-Form)
+
+**Erfassen → Label `begehung` setzen → PDF-Bericht automatisch erhalten.**
+
+## Nutzung
+1. In GitHub unter **Issues → New Issue → Baustellenbegehung** auswählen.
+2. Formular am **Handy/PC** ausfüllen (inkl. **Fotos**).
+3. Issue speichern und das Label **`begehung`** vergeben.
+4. Der **PDF-Bericht** wird als **Action-Artefakt** bereitgestellt.
+
+## Pflege & Auswertung
+- **Labels**: Schweregrad (`mangel/*`), Status (`status/*`), Kategorien (`kategorie/*`).
+- **Meilensteine/Projects** je Bauvorhaben für Fortschritt & Fristen.
+- **Export**: Issue als Markdown/PDF; optional JSON-Schema nutzen.
+
+### Hinweis zur Titelform
+Die Issue-Form nutzt einen neutralen Titel. Du kannst den Titel nach dem Erstellen manuell ergänzen (z. B. „[Begehung] Wehr XYZ – 2025-10-13“).
+""").strip()
+
+open(os.path.join(base, "README.md"), "w", encoding="utf-8").write(readme)
+
+# docs/checklist.md
+checklist = textwrap.dedent("""
+# Checkliste Baustellenbegehung (Kurzüberblick)
+
+Status je Kategorie: **OK / Mangel / n. a.**
+
+- PSA & Zutritt (Helm, Schutzbrille, Warnkleidung, Zugangskontrolle, Unterweisung)
+- Ordnung & Sauberkeit
+- Verkehrswege & Absperrungen
+- Erdarbeiten / Gräben / Wasserbau
+- Gerüste & Leitern
+- Krane & Hebezeuge / Anschlagmittel
+- Maschinen & Geräte (inkl. Teleskopstapler)
+- Elektrik & Beleuchtung
+- Gefahrstoffe / Umweltschutz
+
+**Mängelverwaltung:** Schweregrad, Ort, Beschreibung, Verantwortlicher, Frist; Fotos ergänzen.
+""").strip()
+open(os.path.join(base, "docs/checklist.md"), "w", encoding="utf-8").write(checklist)
+
+# docs/beispiel-report.md
+beispiel_report = textwrap.dedent("""
+# Begehungsbericht (Beispiel)
+
+**Baustelle:** Wehr XYZ – Los 2  
+**Datum & Uhrzeit:** 2025-10-13 09:30  
+**Beteiligte:** H. Maier (Bauleiter), F. Özdemir (Polier)  
+**Witterung:** trocken
+
+## Checkliste (Auszug)
+- PSA & Zutritt: OK
+- Verkehrswege & Absperrungen: Mangel – fehlende Absperrketten am Uferzugang
+- Maschinen & Geräte: OK
+
+## Mängel
+1. **Schweregrad:** hoch — **Ort:** Uferabschnitt A  
+   **Beschreibung:** Absperrungen zum Wasser fehlen. **Maßnahme:** Absperrgitter montieren.  
+   **Verantwortlich:** Firma Beispiel GmbH — **Frist:** 2025-10-15
+
+## Gesamtbewertung
+*i. O. mit Auflagen*
+
+**Prüfer:** J. Mustermann (Sifa)
+""").strip()
+open(os.path.join(base, "docs/beispiel-report.md"), "w", encoding="utf-8").write(beispiel_report)
+
+# data/schemas/baustellenbegehung.schema.json
+schema = {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Baustellenbegehung",
+  "type": "object",
+  "properties": {
+    "site": {"type": "string"},
+    "project": {"type": "string"},
+    "section": {"type": "string"},
+    "coords": {"type": "string"},
+    "begehungsart": {"enum": ["Erstbegehung", "Folgebegehung", "Abnahme", "Ad-hoc"]},
+    "date": {"type": "string"},
+    "team": {"type": "string"},
+    "weather": {"type": "string"},
+    "checklist": {
+      "type": "object",
+      "properties": {
+        "psa": {"enum": ["OK", "Mangel", "n. a."]},
+        "housekeeping": {"enum": ["OK", "Mangel", "n. a."]},
+        "traffic": {"enum": ["OK", "Mangel", "n. a."]},
+        "excavation": {"enum": ["OK", "Mangel", "n. a."]},
+        "scaffolds": {"enum": ["OK", "Mangel", "n. a."]},
+        "lifting": {"enum": ["OK", "Mangel", "n. a."]},
+        "machinery": {"enum": ["OK", "Mangel", "n. a."]},
+        "electrical": {"enum": ["OK", "Mangel", "n. a."]},
+        "chemicals": {"enum": ["OK", "Mangel", "n. a."]}
+      }
+    },
+    "defects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": {"enum": ["gering", "mittel", "hoch", "kritisch"]},
+          "location": {"type": "string"},
+          "description": {"type": "string"},
+          "owner": {"type": "string"},
+          "due": {"type": "string"}
+        },
+        "required": ["severity", "description"]
+      }
+    },
+    "overall": {"enum": ["i. O.", "i. O. mit Auflagen", "nicht i. O."]},
+    "sign": {"type": "string"}
+  },
+  "required": ["site", "begehungsart", "date", "overall", "sign"]
+}
+open(os.path.join(base, "data/schemas/baustellenbegehung.schema.json"), "w", encoding="utf-8").write(json.dumps(schema, ensure_ascii=False, indent=2))
+
+# scripts/render_report.py
+render_py = textwrap.dedent(r"""
+import os, re
+from datetime import date
+
+with open('issue_body.md', 'r', encoding='utf-8') as f:
+    body = f.read()
+
+def section(title):
+    m = re.search(rf"###\s+{re.escape(title)}\n([\s\S]*?)(?=\n###|\Z)", body)
+    return (m.group(1).strip() if m else "")
+
+report = [
+    "# Begehungsbericht",
+    f"**Erstellt:** {date.today().isoformat()}\n",
+    "## Zusammenfassung",
+    section("Baustelle / Standort"),
+    section("Projekt / Bauvorhaben"),
+    section("Begehungsart"),
+    section("Datum & Uhrzeit"),
+    section("Beteiligte"),
+    "\n## Checkliste",
+    section("PSA & Zutritt"),
+    section("Ordnung & Sauberkeit"),
+    section("Verkehrswege & Absperrungen"),
+    section("Erdarbeiten / Gräben / Wasserbau"),
+    section("Gerüste & Leitern"),
+    section("Krane & Hebezeuge / Anschlagmittel"),
+    section("Maschinen & Geräte (inkl. Teleskopstapler)"),
+    section("Elektrik & Beleuchtung"),
+    section("Gefahrstoffe / Umweltschutz"),
+    "\n## Mängel",
+    section("Mängel (Vorlagenfelder 1–5, bei Bedarf nach dem Erstellen kopieren/erweitern)"),
+    "\n## Fotos",
+    section("Fotos"),
+    "\n## Abschluss",
+    section("Gesamtbewertung"),
+    section("Unterschrift/Name Prüfer"),
+]
+
+with open('report.md', 'w', encoding='utf-8') as f:
+    f.write("\n\n".join(report))
+
+print("Report markdown written.")
+""").strip()
+open(os.path.join(base, "scripts/render_report.py"), "w", encoding="utf-8").write(render_py)
+
+# .github/labels.yml
+labels_def = textwrap.dedent("""
+- name: begehung
+  color: 1f77b4
+- name: neu
+  color: cccccc
+- name: mangel/gering
+  color: c3e6cb
+- name: mangel/mittel
+  color: ffd166
+- name: mangel/hoch
+  color: f4a261
+- name: mangel/kritisch
+  color: e76f51
+- name: status/offen
+  color: d3d3d3
+- name: status/in_bearbeitung
+  color: 87ceeb
+- name: status/behoben
+  color: 2ca02c
+- name: kategorie/psa
+  color: 6a5acd
+- name: kategorie/verkehrswege
+  color: 17becf
+- name: kategorie/maschinen
+  color: 9467bd
+""").strip()
+open(os.path.join(base, ".github/labels.yml"), "w", encoding="utf-8").write(labels_def)
+
+# .github/workflows/labels.yml (workflow)
+workflow_labels = textwrap.dedent("""
+name: Sync labels
+on:
+  push:
+    paths: [.github/labels.yml]
+  workflow_dispatch:
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crazy-max/ghaction-github-labeler@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          yaml-file: .github/labels.yml
+""").strip()
+open(os.path.join(base, ".github/workflows/labels.yml"), "w", encoding="utf-8").write(workflow_labels)
+
+# .github/workflows/report.yml
+workflow_report = textwrap.dedent("""
+name: Build Begehungsbericht
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  build-report:
+    if: contains(github.event.label.name, 'begehung')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hole Issue Body via API
+        run: |
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            ${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.issue.number }} \
+            | jq -r '.body' > issue_body.md
+
+      - name: Install pandoc + LaTeX
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y pandoc texlive-latex-recommended texlive-fonts-recommended jq curl
+
+      - name: Render Markdown → PDF
+        run: |
+          mkdir -p reports
+          echo "# Begehungsbericht" > report.md
+          echo "" >> report.md
+          echo "Issue: #${{ github.event.issue.number }} — ${{ github.event.issue.title }}" >> report.md
+          echo "" >> report.md
+          echo "---" >> report.md
+          echo "" >> report.md
+          cat issue_body.md >> report.md
+          pandoc report.md -o reports/begehung-${{ github.event.issue.number }}.pdf
+
+      - name: Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: begehung-${{ github.event.issue.number }}.pdf
+          path: reports/begehung-${{ github.event.issue.number }}.pdf
+""").strip()
+open(os.path.join(base, ".github/workflows/report.yml"), "w", encoding="utf-8").write(workflow_report)
+
+# .github/ISSUE_TEMPLATE/config.yml
+issue_config = textwrap.dedent("""
+blank_issues_enabled: false
+contact_links:
+  - name: Frage oder Support
+    url: https://github.com/
+    about: Stelle eine Frage oder melde ein Problem zur Begehungs-„App“.
+""").strip()
+open(os.path.join(base, ".github/ISSUE_TEMPLATE/config.yml"), "w", encoding="utf-8").write(issue_config)
+
+# .github/ISSUE_TEMPLATE/baustellenbegehung.yml (simplified safe title)
+issue_form = textwrap.dedent("""
+name: Baustellenbegehung
+description: Begehung erfassen (OK/Mangel/NA, Foto, Schweregrad, Frist)
+title: "[Begehung] "
+labels: ["begehung", "neu"]
+body:
+  - type: input
+    id: site
+    attributes:
+      label: Baustelle / Standort
+      description: Projekt-/Baustellenname
+      placeholder: z. B. Wehr XYZ – Los 2
+    validations:
+      required: true
+
+  - type: input
+    id: project
+    attributes:
+      label: Projekt / Bauvorhaben
+      placeholder: z. B. Wasserbau – Spundwand-Erneuerung
+
+  - type: input
+    id: section
+    attributes:
+      label: Abschnitt/Bereich
+      placeholder: z. B. Uferabschnitt A, Kranstandplatz, Graben 3
+
+  - type: input
+    id: coords
+    attributes:
+      label: GPS (optional)
+      placeholder: 50.921, 6.362 (Lat, Lon)
+
+  - type: dropdown
+    id: begehungsart
+    attributes:
+      label: Begehungsart
+      options:
+        - Erstbegehung
+        - Folgebegehung
+        - Abnahme
+        - Ad-hoc
+    validations:
+      required: true
+
+  - type: input
+    id: date
+    attributes:
+      label: Datum & Uhrzeit
+      placeholder: 2025-10-13 09:30
+    validations:
+      required: true
+
+  - type: textarea
+    id: team
+    attributes:
+      label: Beteiligte
+      description: Bauleiter, Polier, Fremdfirmen, Sifa etc.
+      placeholder: z. B. H. Maier (Bauleiter), F. Özdemir (Polier)
+
+  - type: dropdown
+    id: weather
+    attributes:
+      label: Witterung (optional)
+      options: [trocken, Regen, Schnee, Wind, Hitze, Frost]
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Checkliste – Status je Kategorie (OK / Mangel / n. a.)
+        Wähle den Status pro Kategorie und beschreibe Mängel im jeweiligen Feld. Fotos unten anhängen.
+
+  - type: dropdown
+    id: ppe_status
+    attributes:
+      label: PSA & Zutritt
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: ppe_notes
+    attributes:
+      label: PSA – Bemerkungen
+      placeholder: Helm, Schutzbrille, Warnkleidung, Zugangskontrolle, Unterweisung
+
+  - type: dropdown
+    id: housekeeping_status
+    attributes:
+      label: Ordnung & Sauberkeit
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: housekeeping_notes
+    attributes:
+      label: Ordnung & Sauberkeit – Bemerkungen
+
+  - type: dropdown
+    id: traffic_status
+    attributes:
+      label: Verkehrswege & Absperrungen
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: traffic_notes
+    attributes:
+      label: Verkehrswege – Bemerkungen
+
+  - type: dropdown
+    id: excavation_status
+    attributes:
+      label: Erdarbeiten / Gräben / Wasserbau
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: excavation_notes
+    attributes:
+      label: Erdarbeiten – Bemerkungen
+
+  - type: dropdown
+    id: scaffolds_status
+    attributes:
+      label: Gerüste & Leitern
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: scaffolds_notes
+    attributes:
+      label: Gerüste & Leitern – Bemerkungen
+
+  - type: dropdown
+    id: lifting_status
+    attributes:
+      label: Krane & Hebezeuge / Anschlagmittel
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: lifting_notes
+    attributes:
+      label: Krane & Hebezeuge – Bemerkungen
+
+  - type: dropdown
+    id: machinery_status
+    attributes:
+      label: Maschinen & Geräte (inkl. Teleskopstapler)
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: machinery_notes
+    attributes:
+      label: Maschinen & Geräte – Bemerkungen
+
+  - type: dropdown
+    id: electrical_status
+    attributes:
+      label: Elektrik & Beleuchtung
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: electrical_notes
+    attributes:
+      label: Elektrik – Bemerkungen
+
+  - type: dropdown
+    id: chemicals_status
+    attributes:
+      label: Gefahrstoffe / Umweltschutz
+      options: [OK, Mangel, n. a.]
+    validations:
+      required: true
+  - type: textarea
+    id: chemicals_notes
+    attributes:
+      label: Gefahrstoffe – Bemerkungen
+
+  - type: markdown
+    attributes:
+      value: "## Mängel (Vorlagenfelder 1–5; bei Bedarf nach dem Erstellen erweitern)"
+
+  - type: dropdown
+    id: defect1_severity
+    attributes:
+      label: Mangel 1 – Schweregrad
+      options: [gering, mittel, hoch, kritisch]
+  - type: input
+    id: defect1_location
+    attributes:
+      label: Mangel 1 – Ort/Bereich
+      placeholder: z. B. Graben 3 / Ufer A
+  - type: textarea
+    id: defect1_desc
+    attributes:
+      label: Mangel 1 – Beschreibung & Maßnahme
+  - type: input
+    id: defect1_owner
+    attributes:
+      label: Mangel 1 – Verantwortlich
+      placeholder: Firma/Person
+  - type: input
+    id: defect1_due
+    attributes:
+      label: Mangel 1 – Frist (YYYY-MM-DD)
+
+  - type: dropdown
+    id: defect2_severity
+    attributes:
+      label: Mangel 2 – Schweregrad
+      options: [gering, mittel, hoch, kritisch]
+  - type: input
+    id: defect2_location
+    attributes:
+      label: Mangel 2 – Ort/Bereich
+  - type: textarea
+    id: defect2_desc
+    attributes:
+      label: Mangel 2 – Beschreibung & Maßnahme
+  - type: input
+    id: defect2_owner
+    attributes:
+      label: Mangel 2 – Verantwortlich
+  - type: input
+    id: defect2_due
+    attributes:
+      label: Mangel 2 – Frist (YYYY-MM-DD)
+
+  - type: attachments
+    id: photos
+    attributes:
+      label: Fotos
+      description: Füge aussagekräftige Bilder hinzu (Mobil-Upload möglich).
+
+  - type: dropdown
+    id: overall
+    attributes:
+      label: Gesamtbewertung
+      options: ["i. O.", "i. O. mit Auflagen", "nicht i. O."]
+      description: Entspricht Freigabe, Auflagen oder Stilllegung (analog Fahrzeugkontrolle ok/nicht ok).
+    validations:
+      required: true
+
+  - type: input
+    id: sign
+    attributes:
+      label: Unterschrift/Name Prüfer
+      placeholder: J. Mustermann (Sifa)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Bestätigung (Häkchen setzen)
+      options:
+        - label: Angaben geprüft und korrekt
+          required: true
+""").strip()
+open(os.path.join(base, ".github/ISSUE_TEMPLATE/baustellenbegehung.yml"), "w", encoding="utf-8").write(issue_form)
+
+# Zip the repo
+zip_path = "/mnt/data/baustellenbegehung_starter.zip"
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+    for root, dirs, files in os.walk(base):
+        for f in files:
+            full = os.path.join(root, f)
+            rel = os.path.relpath(full, base)
+            zf.write(full, arcname=os.path.join("baustellenbegehung", rel))
+
+zip_path
