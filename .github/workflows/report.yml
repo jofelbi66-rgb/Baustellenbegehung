@@ -1,38 +1,39 @@
 name: Build Begehungsbericht
+
 on:
   issues:
     types: [labeled]
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   build-report:
-    if: contains(github.event.label.name, 'begehung')
+    if: github.event.label.name == 'begehung'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Hole Issue Body via API
+      # Issue-Body direkt aus dem Event in eine Datei schreiben (ohne jq/curl)
+      - name: Write issue body to file
         run: |
-          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            ${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.issue.number }} \
-            | jq -r '.body' > issue_body.md
+          cat > issue_body.md <<'EOF'
+          ${{ github.event.issue.body }}
+          EOF
 
-     - name: Install pandoc + LaTeX + Python
-  run: |
-    sudo apt-get update -y
-    sudo apt-get install -y \
-      pandoc python3 \
-      texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
-      fonts-lmodern
+      - name: Install pandoc + LaTeX + Python
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            pandoc python3 \
+            texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
+            fonts-lmodern
 
-      - name: Render Markdown aus Issue (Tabellen)
+      - name: Render markdown from issue (tables)
         run: |
           python3 scripts/render_report.py
 
-      - name: PDF bauen (Logo in Kopfzeile, jede Seite)
+      - name: Build PDF (logo in header)
         run: |
           mkdir -p reports
           pandoc report.md \
@@ -41,9 +42,8 @@ jobs:
             --pdf-engine=pdflatex \
             -o reports/begehung-${{ github.event.issue.number }}.pdf
 
-      - name: Artefakt hochladen
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: begehung-${{ github.event.issue.number }}.pdf
           path: reports/begehung-${{ github.event.issue.number }}.pdf
-
