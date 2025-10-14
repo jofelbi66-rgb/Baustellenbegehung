@@ -7,6 +7,7 @@
 \renewcommand{\familydefault}{\sfdefault}
 \usepackage{setspace}
 \setstretch{1.15}                 % Achtung: Punkt, keine weiteren Zeichen!
+\setlength{\fboxsep}{6pt} % Padding für \colorbox (Status-Balken)
 
 % ---------- Farben, Tabellen, Links ----------
 \usepackage[table]{xcolor}
