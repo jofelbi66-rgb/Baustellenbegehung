@@ -1,9 +1,14 @@
 \documentclass[11pt,a4paper]{article}
 
 % ---------- Seitenlayout & Schrift ----------
-\usepackage[margin=2.5cm,top=2.0cm,bottom=2.5cm]{geometry}
+\usepackage[margin=2.5cm,top=3.0cm]{geometry} % mehr Top-Rand
+...
+\setlength{\headheight}{28pt}  % höherer Kopfbereich
+\setlength{\headsep}{18pt}     % Abstand Kopf → Text
+
 \usepackage[T1]{fontenc}
-\usepackage{lmodern}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault} % setze Helvetica als Standardschrift
 \usepackage{setspace}
 \setstretch{1.15}
 \usepackage[table]{xcolor}
@@ -23,10 +28,10 @@
 % ---------- Logo + Kopfzeile ----------
 \newcommand{\HeaderLogo}{%
   \IfFileExists{docs/logo.png}{
-    \includegraphics[height=1.2cm]{docs/logo.png}
+    \includegraphics[height=1.1cm]{docs/logo.png}
   }{
     \IfFileExists{docs/logo.jpg}{
-      \includegraphics[height=1.2cm]{docs/logo.jpg}
+      \includegraphics[height=1.1cm]{docs/logo.jpg}
     }{}
   }%
 }
@@ -69,9 +74,7 @@ $if(title)$
 $endif$
 
 
-\vspace{-1cm}
-\hrule
-\vspace{0.5cm}
+
 
 $body$
 
