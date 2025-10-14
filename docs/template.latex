@@ -1,62 +1,51 @@
 \documentclass[11pt,a4paper]{article}
 
 % ---------- Seitenlayout & Schrift ----------
-\usepackage[margin=2.5cm,top=3.0cm]{geometry} % mehr Top-Rand
-...
-\setlength{\headheight}{28pt}  % höherer Kopfbereich
-\setlength{\headsep}{18pt}     % Abstand Kopf → Text
-
+\usepackage[margin=2.5cm,top=3.0cm,bottom=2.5cm]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{helvet}
-\renewcommand{\familydefault}{\sfdefault} % setze Helvetica als Standardschrift
+\usepackage{helvet}               % sachlich-serifenlos
+\renewcommand{\familydefault}{\sfdefault}
 \usepackage{setspace}
-\setstretch{1.15}
+\setstretch{1.15}                 % Achtung: Punkt, keine weiteren Zeichen!
+
+% ---------- Farben, Tabellen, Links ----------
 \usepackage[table]{xcolor}
-\usepackage{colortbl} % optional, schadet nicht
-
-\usepackage{titlesec}
-
-% ---------- Tabellen, Grafiken, Kopf/Fuß ----------
+\usepackage{colortbl}
 \usepackage{array, longtable, booktabs, tabularx}
-\usepackage[table]{xcolor}
-\usepackage{graphicx}
-\usepackage{fancyhdr}
-\usepackage{lastpage}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true, urlcolor=blue, linkcolor=black}
 
-% ---------- Logo + Kopfzeile ----------
+% ---------- Grafiken & Kopf-/Fußzeilen ----------
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+% Logo-Funktion (nimmt PNG oder JPG, wenn vorhanden)
 \newcommand{\HeaderLogo}{%
-  \IfFileExists{docs/logo.png}{
-    \includegraphics[height=1.1cm]{docs/logo.png}
-  }{
-    \IfFileExists{docs/logo.jpg}{
-      \includegraphics[height=1.1cm]{docs/logo.jpg}
-    }{}
+  \IfFileExists{docs/logo.png}{\includegraphics[height=1.1cm]{docs/logo.png}}{%
+    \IfFileExists{docs/logo.jpg}{\includegraphics[height=1.1cm]{docs/logo.jpg}}{}%
   }%
 }
 
+% Kopf-/Fußzeile
 \pagestyle{fancy}
-\fancyhf{} % clear default
+\fancyhf{} % clear
 \fancyhead[L]{\textbf{\footnotesize Baustellenbegehung}}
 \fancyhead[R]{\HeaderLogo}
 \fancyfoot[L]{\scriptsize Erstellt: \today}
-\fancyfoot[R]{\scriptsize Seite \thepage\ / \pageref{LastPage}}
-\setlength{\headheight}{22pt} % genug Platz fürs Logo
+\fancyfoot[R]{\scriptsize Seite \thepage\ /\ \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\setlength{\headheight}{28pt}   % höherer Kopfbereich
+\setlength{\headsep}{18pt}      % Abstand Kopf → Text
 
-% ---------- Überschriften ----------
-\titleformat{\section}{\Large\bfseries\sffamily\color{black}}{}{0pt}{}
-\titleformat{\subsection}{\large\bfseries\sffamily\color{gray!60!black}}{}{0pt}{}
-\titleformat{\subsubsection}{\normalsize\bfseries\sffamily\color{gray!70!black}}{}{0pt}{}
+% Dezente Tabellenoptik
+\definecolor{tblhead}{RGB}{240,240,240}
+\AtBeginEnvironment{longtable}{\rowcolors{2}{gray!08}{white}}
 
-% ---------- Tabellen-Stil ----------
-\renewcommand{\arraystretch}{1.3}
-\rowcolors{2}{gray!10}{white}
-\setlength{\tabcolsep}{6pt}
-
-% ---------- Dokument ----------
+% ---------- Dokument-Metadaten ----------
 $if(title)$
-\title{\vspace{-2cm}\textbf{\Huge $title$}}
+\title{\textbf{\Large $title$}}
 $endif$
 $if(author)$
 \author{$author$}
@@ -70,13 +59,9 @@ $endif$
 \begin{document}
 $if(title)$
 \maketitle
-\thispagestyle{fancy} % Titelseite soll die Kopfzeile (Logo) zeigen
+\thispagestyle{fancy} % Titelseite mit Kopfzeile (Logo)
 $endif$
-
-
-
 
 $body$
 
 \end{document}
-
