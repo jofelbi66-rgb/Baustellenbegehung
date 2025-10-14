@@ -32,27 +32,35 @@ jobs:
         run: |
           python3 scripts/render_report.py
 
-      - name: Build PDF (logo in header)
-        run: |
-          mkdir -p reports
-          pandoc report.md \
-            --from=markdown+raw_tex+pipe_tables \
-            --template=docs/template.latex \
-            --pdf-engine=pdflatex \
-            --resource-path=".:docs" \
-            -o "reports/begehung-${{ github.event.issue.number }}.pdf"
-          # Debug: LaTeX-Quelle mitschreiben (hilfreich bei Fehlern)
-          pandoc report.md \
-            --from=markdown+raw_tex+pipe_tables \
-            --template=docs/template.latex \
-            --resource-path=".:docs" \
-            -t latex \
-            -o "reports/debug-${{ github.event.issue.number }}.tex"
+   - name: Build PDF (immer mit Debug)
+  run: |
+    mkdir -p reports
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: begehung-${{ github.event.issue.number }}
-          path: |
-            reports/begehung-${{ github.event.issue.number }}.pdf
-            reports/debug-${{ github.event.issue.number }}.tex
+    echo "==> Schritt 1: Debug-LaTeX-Datei erzeugen"
+    pandoc report.md \
+      --from=markdown+raw_tex+pipe_tables \
+      --template=docs/template.latex \
+      --resource-path=".:docs" \
+      -t latex \
+      -o "reports/debug-${{ github.event.issue.number }}.tex"
+
+    echo "==> Schritt 2: PDF erzeugen (Fehler werden ignoriert)"
+    set +e
+    pandoc report.md \
+      --from=markdown+raw_tex+pipe_tables \
+      --template=docs/template.latex \
+      --pdf-engine=pdflatex \
+      --resource-path=".:docs" \
+      -o "reports/begehung-${{ github.event.issue.number }}.pdf"
+    echo "Pandoc exit code: $?"
+    set -e
+
+- name: Upload artifacts (auch bei Fehler)
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: begehung-${{ github.event.issue.number }}
+    path: |
+      reports/debug-${{ github.event.issue.number }}.tex
+      reports/begehung-${{ github.event.issue.number }}.pdf
+    if-no-files-found: warn
