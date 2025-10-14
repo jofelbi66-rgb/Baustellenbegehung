@@ -1,46 +1,51 @@
 \documentclass[11pt,a4paper]{article}
 
-% Seitenlayout
-\usepackage[margin=2.2cm]{geometry}
-
-% Schriften (robust für pdflatex)
+% ---------- Seitenlayout & Schrift ----------
+\usepackage[margin=2.5cm,top=2.0cm,bottom=2.5cm]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+\usepackage{setspace}
+\setstretch{1.15}
+\usepackage{xcolor}
+\usepackage{titlesec}
 
-% Tabellen, Grafik, Kopf-/Fußzeilen, Links
+% ---------- Tabellen, Grafiken, Kopf/Fuß ----------
 \usepackage{array, longtable, booktabs, tabularx}
 \usepackage{graphicx}
 \usepackage{fancyhdr}
 \usepackage{lastpage}
 \usepackage{hyperref}
-\hypersetup{colorlinks=true, urlcolor=blue}
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=black}
 
-% ---------- Logo-Einbindung (explizit) ----------
-\usepackage{graphicx}
-
-% Nimm genau docs/logo.png oder ersatzweise docs/logo.jpg – sonst leer
+% ---------- Logo + Kopfzeile ----------
 \newcommand{\HeaderLogo}{%
   \IfFileExists{docs/logo.png}{\includegraphics[height=1.2cm]{docs/logo.png}}{%
     \IfFileExists{docs/logo.jpg}{\includegraphics[height=1.2cm]{docs/logo.jpg}}{}%
   }%
 }
-% -----------------------------------------------
 
 \pagestyle{fancy}
-\fancyhf{}
-\fancyhead[L]{\footnotesize Baustellenbegehung}
+\fancyhf{} % clear default
+\fancyhead[L]{\textbf{\footnotesize Baustellenbegehung}}
 \fancyhead[R]{\HeaderLogo}
-\fancyfoot[L]{\footnotesize Erstellt: \today}
-\fancyfoot[R]{\footnotesize Seite \thepage/\pageref{LastPage}}
+\fancyfoot[L]{\scriptsize Erstellt: \today}
+\fancyfoot[R]{\scriptsize Seite \thepage\ / \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
 
+% ---------- Überschriften ----------
+\titleformat{\section}{\Large\bfseries\sffamily\color{black}}{}{0pt}{}
+\titleformat{\subsection}{\large\bfseries\sffamily\color{gray!60!black}}{}{0pt}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\sffamily\color{gray!70!black}}{}{0pt}{}
 
-% Absätze/Tabellenabstände
-\setlength{\parskip}{6pt}
-\setlength{\parindent}{0pt}
-\renewcommand{\arraystretch}{1.2}
+% ---------- Tabellen-Stil ----------
+\renewcommand{\arraystretch}{1.3}
+\rowcolors{2}{gray!10}{white}
+\setlength{\tabcolsep}{6pt}
 
+% ---------- Dokument ----------
 $if(title)$
-\title{$title$}
+\title{\vspace{-2cm}\textbf{\Huge $title$}}
 $endif$
 $if(author)$
 \author{$author$}
@@ -55,6 +60,10 @@ $endif$
 $if(title)$
 \maketitle
 $endif$
+
+\vspace{-1cm}
+\hrule
+\vspace{0.5cm}
 
 $body$
 
