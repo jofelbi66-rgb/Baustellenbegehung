@@ -1,18 +1,41 @@
 import re
 from datetime import date
 
-# Issue-Markdown laden
-with open('issue_body.md', 'r', encoding='utf-8') as f:
-    body = f.read()
+# --- Util ---------------------------------------------------------------
+def read_issue_body():
+    with open('issue_body.md', 'r', encoding='utf-8') as f:
+        return f.read()
+
+BODY = read_issue_body()
 
 def grab(h):
-    m = re.search(rf"^###\s*{re.escape(h)}\s*$\n(.*?)(?:\n###|\Z)", body, flags=re.M|re.S)
+    m = re.search(rf"^###\s*{re.escape(h)}\s*$\n(.*?)(?:\n###|\Z)", BODY, flags=re.M|re.S)
     return (m.group(1).strip() if m else "")
 
 def clean(v):
     return re.sub(r"\n+", " ", (v or "")).strip()
 
-# Formular-Felder
+# Normierter Status (für Ampel-Logik)
+def normalize_status(raw: str) -> str:
+    s = (raw or "").strip().lower()
+    if s in ["ok", "i. o.", "i.o.", "io", "in ordnung"]:
+        return "ok"
+    if s in ["mangel", "nicht i. o.", "nicht i.o.", "nicht io", "hoch", "kritisch"]:
+        return "fail"
+    if s in ["hinweis", "auflage", "mittel"]:
+        return "warn"
+    if s in ["n. a.", "n.a.", "na", "nicht zutreffend"]:
+        return "na"
+    return "na"
+
+# farbige Zelle für Tabellen
+def status_cell(raw: str) -> str:
+    st = normalize_status(raw)
+    text = {"ok":"OK","warn":"Hinweis","fail":"Mangel","na":"n.\\,a."}[st]
+    color = {"ok":"ok","warn":"warn","fail":"fail","na":"na"}[st]
+    return rf"\cellcolor{{{color}}}\textbf{{{text}}}"
+
+# --- Felder -------------------------------------------------------------
 site    = clean(grab("Baustelle / Standort"))
 project = clean(grab("Projekt / Bauvorhaben"))
 section = clean(grab("Abschnitt/Bereich"))
@@ -24,26 +47,7 @@ weather = clean(grab("Witterung \\(optional\\)"))
 overall = clean(grab("Gesamtbewertung"))
 sign    = clean(grab("Unterschrift/Name Prüfer"))
 
-# Status-Mapping (OK / Mangel / n. a. / Hinweis)
-def status_cell(raw: str) -> str:
-    s = (raw or "").strip().lower()
-    if s in ["ok", "i. o.", "i.o.", "io"]:
-        return r"\cellcolor{ok}\textbf{OK}"
-    if s in ["mangel", "nicht i. o.", "nicht i.o.", "nicht io", "kritisch"]:
-        return r"\cellcolor{fail}\textbf{Mangel}"
-    if s in ["hinweis", "auflage"]:
-        return r"\cellcolor{warn}\textbf{Hinweis}"
-    if s in ["n. a.", "n.a.", "na", "nicht zutreffend"]:
-        return r"\cellcolor{na}\textbf{n.\,a.}"
-    # Fallback (unbekannt)
-    return r"\cellcolor{na}–"
-
-def pair_status_notes(base_label: str):
-    s = clean(grab(base_label))
-    n = clean(grab(base_label + " – Bemerkungen"))
-    return status_cell(s), (n if n else "–")
-
-# Checkliste
+# --- Checkliste ---------------------------------------------------------
 check_labels = [
     "PSA & Zutritt",
     "Ordnung & Sauberkeit",
@@ -55,35 +59,67 @@ check_labels = [
     "Elektrik & Beleuchtung",
     "Gefahrstoffe / Umweltschutz",
 ]
+
+status_list = []   # für Ampel
 check_rows = []
+
 for lbl in check_labels:
-    sc, notes = pair_status_notes(lbl)
-    # Markdown-Tabelle – Status-Feld enthält LaTeX (\cellcolor ...)
-    check_rows.append(f"| {lbl} | {sc} | {notes} |")
+    s_raw = clean(grab(lbl))
+    n     = clean(grab(lbl + " – Bemerkungen"))
+    status_list.append(normalize_status(s_raw))
+    check_rows.append(f"| {lbl} | {status_cell(s_raw)} | {n or '–'} |")
 
-# Mängel-Tabelle (wie gehabt; optional farbige Schweregrade)
-def defect(n):
-    sev = clean(grab(f"Mangel {n} – Schweregrad"))
-    loc = clean(grab(f"Mangel {n} – Ort/Bereich"))
-    desc = clean(grab(f"Mangel {n} – Beschreibung & Maßnahme"))
-    owner = clean(grab(f"Mangel {n} – Verantwortlich"))
-    due = clean(grab(f"Mangel {n} – Frist \\(YYYY-MM-DD\\)"))
-    if not any([sev, loc, desc, owner, due]):
-        return ""
-    sev_map = {
-        "gering": r"\cellcolor{ok}\textbf{gering}",
-        "mittel": r"\cellcolor{warn}\textbf{mittel}",
-        "hoch": r"\cellcolor{fail}\textbf{hoch}",
-        "kritisch": r"\cellcolor{fail}\textbf{kritisch}",
-    }
-    sev_cell = sev_map.get(sev.lower(), sev or "–")
-    return f"| {sev_cell} | {loc or '–'} | {desc or '–'} | {owner or '–'} | {due or '–'} |"
+# --- Mängel (optional in Ampel berücksichtigen) -------------------------
+defect_rows = []
+def worst_with_defect(st_current: str, sev: str) -> str:
+    """sehr grob: hoch/kritisch => fail, mittel => warn, gering => ok/warn bleibt"""
+    sev = (sev or "").strip().lower()
+    if sev in ["hoch", "kritisch"]:
+        return "fail"
+    if sev in ["mittel"]:
+        return "warn" if st_current != "fail" else "fail"
+    return st_current
 
-defects = [d for d in (defect(1), defect(2)) if d]
+for i in (1, 2):
+    sev = clean(grab(f"Mangel {i} – Schweregrad"))
+    loc = clean(grab(f"Mangel {i} – Ort/Bereich"))
+    desc= clean(grab(f"Mangel {i} – Beschreibung & Maßnahme"))
+    owner=clean(grab(f"Mangel {i} – Verantwortlich"))
+    due = clean(grab(f"Mangel {i} – Frist \\(YYYY-MM-DD\\)"))
+    if any([sev, loc, desc, owner, due]):
+        sev_map = {
+            "gering":  r"\cellcolor{ok}\textbf{gering}",
+            "mittel":  r"\cellcolor{warn}\textbf{mittel}",
+            "hoch":    r"\cellcolor{fail}\textbf{hoch}",
+            "kritisch":r"\cellcolor{fail}\textbf{kritisch}",
+        }
+        sev_cell = sev_map.get(sev.lower(), sev or "–")
+        defect_rows.append(f"| {sev_cell} | {loc or '–'} | {desc or '–'} | {owner or '–'} | {due or '–'} |")
+        # Ampel verschärfen
+        status_list.append(worst_with_defect("ok", sev))
 
-# Bericht zusammenbauen
+# --- Ampel „Status Gesamt“ ---------------------------------------------
+# Reihenfolge: fail > warn > ok ; 'na' zählt nicht
+rank = {"fail":3, "warn":2, "ok":1, "na":0}
+worst = "ok"
+for st in status_list:
+    if rank.get(st,0) > rank.get(worst,0):
+        worst = st
+
+bar_text = {
+    "fail": "GESAMT: MANGEL",
+    "warn": "GESAMT: HINWEIS/AUFLAGEN",
+    "ok":   "GESAMT: I. O.",
+    "na":   "GESAMT: n. a.",
+}[worst]
+bar_color = {"fail":"fail", "warn":"warn", "ok":"ok", "na":"na"}[worst]
+status_bar = rf"\begin{{center}}\colorbox{{{bar_color}}}{{\rule{{0pt}}{{14pt}}\hspace{{8pt}}\textbf{{{bar_text}}}\hspace{{8pt}}}}\end{{center}}"
+
+# --- Bericht aufbauen ---------------------------------------------------
 md = []
 md.append("# Begehungsbericht\n")
+md.append(status_bar + "\n")  # Ampel unter den Titel
+
 md.append(
     f"**Baustelle:** {site or '–'}  \n"
     f"**Projekt:** {project or '–'}  \n"
@@ -106,18 +142,19 @@ md.extend(check_rows)
 
 # Mängel
 md.append("\n## Mängel")
-if defects:
+if defect_rows:
     md.append("| Schweregrad | Ort/Bereich | Beschreibung & Maßnahme | Verantwortlich | Frist |")
     md.append("|---|---|---|---|---|")
-    md.extend(defects)
+    md.extend(defect_rows)
 else:
     md.append("_Keine Mängel erfasst._")
 
 # Abschluss
+overall_line = f"**Gesamtbewertung (Form):** {overall or '–'}"
 md.append("\n## Abschluss")
-md.append(f"**Gesamtbewertung:** {overall or '–'}  \n**Prüfer:** {sign or '–'}")
+md.append(f"{overall_line}  \n**Prüfer:** {sign or '–'}")
 
-# Pandoc-Frontmatter
+# Frontmatter
 front = f"---\ntitle: Baustellenbegehung – {site or 'unbenannt'}\ndate: {date.today().isoformat()}\n---\n\n"
 with open('report.md', 'w', encoding='utf-8') as f:
     f.write(front + "\n".join(md))
