@@ -68,7 +68,9 @@ $endif$
 \begin{document}
 $if(title)$
 \maketitle
+\thispagestyle{fancy} % Titelseite soll die Kopfzeile (Logo) zeigen
 $endif$
+
 
 \vspace{-1cm}
 \hrule
