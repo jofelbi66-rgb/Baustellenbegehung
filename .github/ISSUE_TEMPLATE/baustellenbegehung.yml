@@ -228,12 +228,15 @@ body:
     attributes:
       label: Mangel 2 – Frist (YYYY-MM-DD)
 
-    - type: textarea
+  - type: textarea
     id: photos
     attributes:
       label: Fotos (optional)
-      description: Füge Bild-Links ein ODER lade die Fotos nach dem Erstellen des Issues per Drag & Drop in das Issue hoch.
-      placeholder: "z. B. Bild 1: ..., Bild 2: ..."
+      description: |
+        Füge Bild-Links ein ODER lade die Fotos nach dem Erstellen des Issues direkt
+        im GitHub-Issue per Drag & Drop hoch.
+      placeholder: "z. B. Bild 1: Absperrung fehlt, Bild 2: Gerüst unvollständig"
+
 
   - type: dropdown
     id: overall
