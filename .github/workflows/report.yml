@@ -28,6 +28,33 @@ jobs:
           cat > issue_body.md <<'EOF'
           ${{ github.event.issue.body }}
           EOF
+      - name: Resolve issue number
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "num=${{ inputs.issue_number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "num=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch issue body
+        id: fetch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const n = Number("${{ steps.meta.outputs.num }}");
+            const {data} = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: n,
+            });
+            core.setOutput('body', data.body || '');
+
+      - name: Write issue body to file
+        run: |
+          cat > issue_body.md <<'EOF'
+          ${{ steps.fetch.outputs.body }}
+          EOF
 
       - name: Install pandoc + LaTeX + Python
         run: |
