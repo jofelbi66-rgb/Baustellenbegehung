@@ -15,6 +15,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Write issue body to file
+        run: |
+          cat > issue_body.md <<'EOF'
+          ${{ github.event.issue.body }}
+          EOF
 
       - name: Install pandoc + LaTeX + Python
         run: |
