@@ -11,10 +11,11 @@ jobs:
   build-report:
     if: github.event.label.name == 'begehung'
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      # Issue-Body direkt aus dem Event in eine Datei schreiben (ohne jq/curl)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Write issue body to file
         run: |
           cat > issue_body.md <<'EOF'
@@ -33,7 +34,7 @@ jobs:
         run: |
           python3 scripts/render_report.py
 
-           - name: Build PDF (logo in header)
+      - name: Build PDF (logo in header)
         run: |
           mkdir -p reports
           pandoc report.md \
@@ -43,9 +44,9 @@ jobs:
             --resource-path=.:docs \
             -o reports/begehung-${{ github.event.issue.number }}.pdf
 
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: begehung-${{ github.event.issue.number }}.pdf
           path: reports/begehung-${{ github.event.issue.number }}.pdf
+
