@@ -1,0 +1,40 @@
+name: Build Begehungsbericht
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  build-report:
+    if: contains(github.event.label.name, 'begehung')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hole Issue Body via API
+        run: |
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            ${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.issue.number }} \
+            | jq -r '.body' > issue_body.md
+
+      - name: Install pandoc + LaTeX
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y pandoc texlive-latex-recommended texlive-fonts-recommended jq curl
+
+      - name: Render Markdown → PDF
+        run: |
+          mkdir -p reports
+          echo "# Begehungsbericht" > report.md
+          echo "" >> report.md
+          echo "Issue: #${{ github.event.issue.number }} — ${{ github.event.issue.title }}" >> report.md
+          echo "" >> report.md
+          echo "---" >> report.md
+          echo "" >> report.md
+          cat issue_body.md >> report.md
+          pandoc report.md -o reports/begehung-${{ github.event.issue.number }}.pdf
+
+      - name: Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: begehung-${{ github.event.issue.number }}.pdf
+          path: reports/begehung-${{ github.event.issue.number }}.pdf
