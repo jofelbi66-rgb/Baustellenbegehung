@@ -42,7 +42,7 @@
 
 % Dezente Tabellenoptik
 \definecolor{tblhead}{RGB}{240,240,240}
-\AtBeginEnvironment{longtable}{\rowcolors{2}{gray!08}{white}}
+\AtBeginEnvironment{longtable}{\rowcolors{2}{gray!10}{white}}
 
 % ---------- Dokument-Metadaten ----------
 $if(title)$
