@@ -18,9 +18,15 @@
 \hypersetup{colorlinks=true, urlcolor=blue, linkcolor=black}
 
 % ---------- Logo + Kopfzeile ----------
+\usepackage{graphicx}
+
 \newcommand{\HeaderLogo}{%
-  \IfFileExists{docs/logo.png}{\includegraphics[height=1.2cm]{docs/logo.png}}{%
-    \IfFileExists{docs/logo.jpg}{\includegraphics[height=1.2cm]{docs/logo.jpg}}{}%
+  \IfFileExists{docs/logo.png}{
+    \includegraphics[height=1.2cm]{docs/logo.png}
+  }{
+    \IfFileExists{docs/logo.jpg}{
+      \includegraphics[height=1.2cm]{docs/logo.jpg}
+    }{}
   }%
 }
 
@@ -32,6 +38,7 @@
 \fancyfoot[R]{\scriptsize Seite \thepage\ / \pageref{LastPage}}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0.4pt}
+\setlength{\headheight}{22pt} % genug Platz fürs Logo
 
 % ---------- Überschriften ----------
 \titleformat{\section}{\Large\bfseries\sffamily\color{black}}{}{0pt}{}
