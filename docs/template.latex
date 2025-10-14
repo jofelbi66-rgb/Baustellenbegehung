@@ -15,25 +15,24 @@
 \usepackage{hyperref}
 \hypersetup{colorlinks=true, urlcolor=blue}
 
-% ---------- Logo-Einbindung (robust) ----------
-% Suche Ressourcen auch im ./ und im docs/-Ordner
-\graphicspath{{./}{docs/}}
+% ---------- Logo-Einbindung (explizit) ----------
+\usepackage{graphicx}
 
-% Hilfsbefehl: nimmt logo.png oder logo.jpg aus docs/, falls vorhanden
+% Nimm genau docs/logo.png oder ersatzweise docs/logo.jpg – sonst leer
 \newcommand{\HeaderLogo}{%
-  \IfFileExists{docs/logo.png}{\includegraphics[height=1.2cm]{logo.png}}{%
-    \IfFileExists{docs/logo.jpg}{\includegraphics[height=1.2cm]{logo.jpg}}{}%
+  \IfFileExists{docs/logo.png}{\includegraphics[height=1.2cm]{docs/logo.png}}{%
+    \IfFileExists{docs/logo.jpg}{\includegraphics[height=1.2cm]{docs/logo.jpg}}{}%
   }%
 }
-% ---------------------------------------------
+% -----------------------------------------------
 
-% Kopf-/Fußzeile
 \pagestyle{fancy}
-\fancyhf{} % clear
+\fancyhf{}
 \fancyhead[L]{\footnotesize Baustellenbegehung}
 \fancyhead[R]{\HeaderLogo}
 \fancyfoot[L]{\footnotesize Erstellt: \today}
 \fancyfoot[R]{\footnotesize Seite \thepage/\pageref{LastPage}}
+
 
 % Absätze/Tabellenabstände
 \setlength{\parskip}{6pt}
