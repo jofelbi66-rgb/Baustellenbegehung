@@ -8,42 +8,29 @@ permissions:
   contents: read
 
 jobs:
-  build-report:
+  build:
     if: github.event.label.name == 'begehung'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Write issue body to file
-        run: |
-          cat > issue_body.md <<'EOF'
-          ${{ github.event.issue.body }}
-          EOF
-
       - name: Install pandoc + LaTeX + Python
         run: |
-          sudo apt-get update -y && \
+          sudo apt-get update -y
           sudo apt-get install -y pandoc python3 texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended fonts-lmodern
 
       - name: Render markdown from issue (tables)
-        run: |
-          python3 scripts/render_report.py
-      - name: Debug assets
-        run: |
-          echo "PWD=$(pwd)"
-          ls -la
-          echo "--- docs:"
-          ls -la docs || true
-          echo "--- file info:"
-          file docs/logo.png || true
-          file docs/logo.jpg || true
+        run: python3 scripts/render_report.py
 
       - name: Build PDF (logo in header)
-       run: mkdir -p reports && pandoc report.md --from=markdown+raw_tex+pipe_tables --template=docs/template.latex --pdf-engine=pdflatex --resource-path=".:docs" -o "reports/begehung-${{ github.event.issue.number }}.pdf"
+        run: |
+          mkdir -p reports
+          pandoc report.md \
+            --from=markdown+raw_tex+pipe_tables \
+            --template=docs/template.latex \
+            --pdf-engine=pdflatex \
+            --resource-path=".:docs" \
+            -o "reports/begehung-${{ github.event.issue.number }}.pdf"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: begehung-${{ github.event.issue.number }}.pdf
-          path: reports/begehung-${{ github.event.issue.number }}.pdf
