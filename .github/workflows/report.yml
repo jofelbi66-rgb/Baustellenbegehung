@@ -24,7 +24,7 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y pandoc texlive-latex-recommended texlive-fonts-recommended \
-            texlive-latex-extra jq curl python3
+           texlive-latex-extra texlive-lm python3
 
       - name: Render Markdown aus Issue (Tabellen)
         run: |
