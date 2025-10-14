@@ -11,7 +11,6 @@ jobs:
   build-report:
     if: github.event.label.name == 'begehung'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,30 +23,18 @@ jobs:
 
       - name: Install pandoc + LaTeX + Python
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y \
-            pandoc python3 \
-            texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
-            fonts-lmodern
+          sudo apt-get update -y && \
+          sudo apt-get install -y pandoc python3 texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended fonts-lmodern
 
       - name: Render markdown from issue (tables)
         run: |
           python3 scripts/render_report.py
 
       - name: Build PDF (logo in header)
-        run: |
-          mkdir -p reports
-         
-pandoc report.md \
-  --from=gfm \
-  --template=docs/template.latex \
-  --pdf-engine=pdflatex \
-  --resource-path=.:docs \
-  -o reports/begehung-${{ github.event.issue.number }}.pdf
+        run: mkdir -p reports && pandoc report.md --from=gfm --template=docs/template.latex --pdf-engine=pdflatex --resource-path=".:docs" -o "reports/begehung-${{ github.event.issue.number }}.pdf"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: begehung-${{ github.event.issue.number }}.pdf
           path: reports/begehung-${{ github.event.issue.number }}.pdf
-
