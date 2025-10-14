@@ -28,14 +28,30 @@ jobs:
 
       - name: Render markdown from issue (tables)
         run: python3 scripts/render_report.py
+- name: Build PDF (logo in header)
+  run: |
+    mkdir -p reports
+    # 1) PDF bauen
+    pandoc report.md \
+      --from=markdown+raw_tex+pipe_tables \
+      --template=docs/template.latex \
+      --pdf-engine=pdflatex \
+      --resource-path=".:docs" \
+      -o "reports/begehung-${{ github.event.issue.number }}.pdf"
+    # 2) Debug: LaTeX-Datei mitschreiben
+    pandoc report.md \
+      --from=markdown+raw_tex+pipe_tables \
+      --template=docs/template.latex \
+      --resource-path=".:docs" \
+      -t latex \
+      -o "reports/debug-${{ github.event.issue.number }}.tex"
 
-      - name: Build PDF (logo in header)
-        run: |
-          mkdir -p reports
-          pandoc report.md \
-            --from=markdown+raw_tex+pipe_tables \
-            --template=docs/template.latex \
-            --pdf-engine=pdflatex \
-            --resource-path=".:docs" \
-            -o "reports/begehung-${{ github.event.issue.number }}.pdf"
+      - name: Upload artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: begehung-${{ github.event.issue.number }}
+    path: |
+      reports/begehung-${{ github.event.issue.number }}.pdf
+      reports/debug-${{ github.event.issue.number }}.tex
+
 
