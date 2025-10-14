@@ -15,6 +15,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Write issue body to file
         run: |
           cat > issue_body.md <<'EOF'
@@ -24,34 +25,34 @@ jobs:
       - name: Install pandoc + LaTeX + Python
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y pandoc python3 texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended fonts-lmodern
+          sudo apt-get install -y pandoc python3 \
+            texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended fonts-lmodern
 
       - name: Render markdown from issue (tables)
-        run: python3 scripts/render_report.py
-- name: Build PDF (logo in header)
-  run: |
-    mkdir -p reports
-    # 1) PDF bauen
-    pandoc report.md \
-      --from=markdown+raw_tex+pipe_tables \
-      --template=docs/template.latex \
-      --pdf-engine=pdflatex \
-      --resource-path=".:docs" \
-      -o "reports/begehung-${{ github.event.issue.number }}.pdf"
-    # 2) Debug: LaTeX-Datei mitschreiben
-    pandoc report.md \
-      --from=markdown+raw_tex+pipe_tables \
-      --template=docs/template.latex \
-      --resource-path=".:docs" \
-      -t latex \
-      -o "reports/debug-${{ github.event.issue.number }}.tex"
+        run: |
+          python3 scripts/render_report.py
+
+      - name: Build PDF (logo in header)
+        run: |
+          mkdir -p reports
+          pandoc report.md \
+            --from=markdown+raw_tex+pipe_tables \
+            --template=docs/template.latex \
+            --pdf-engine=pdflatex \
+            --resource-path=".:docs" \
+            -o "reports/begehung-${{ github.event.issue.number }}.pdf"
+          # Debug: LaTeX-Quelle mitschreiben
+          pandoc report.md \
+            --from=markdown+raw_tex+pipe_tables \
+            --template=docs/template.latex \
+            --resource-path=".:docs" \
+            -t latex \
+            -o "reports/debug-${{ github.event.issue.number }}.tex"
 
       - name: Upload artifact
-  uses: actions/upload-artifact@v4
-  with:
-    name: begehung-${{ github.event.issue.number }}
-    path: |
-      reports/begehung-${{ github.event.issue.number }}.pdf
-      reports/debug-${{ github.event.issue.number }}.tex
-
-
+        uses: actions/upload-artifact@v4
+        with:
+          name: begehung-${{ github.event.issue.number }}
+          path: |
+            reports/begehung-${{ github.event.issue.number }}.pdf
+            reports/debug-${{ github.event.issue.number }}.tex
