@@ -40,7 +40,8 @@ jobs:
           file docs/logo.jpg || true
 
       - name: Build PDF (logo in header)
-        run: mkdir -p reports && pandoc report.md --from=gfm --template=docs/template.latex --pdf-engine=pdflatex --resource-path=".:docs" -o "reports/begehung-${{ github.event.issue.number }}.pdf"
+        run: mkdir -p reports && pandoc report.md --from=markdown+raw_tex+pipe_tables
+--template=docs/template.latex --pdf-engine=pdflatex --resource-path=".:docs" -o "reports/begehung-${{ github.event.issue.number }}.pdf"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
