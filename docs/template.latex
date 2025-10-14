@@ -1,7 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=2.2cm]{geometry}
-\usepackage{fontspec} % xelatex
-\setmainfont{DejaVu Serif}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage{graphicx}
 \usepackage{array, longtable, booktabs}
 \usepackage{tabularx}
