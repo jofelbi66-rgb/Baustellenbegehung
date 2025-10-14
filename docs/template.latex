@@ -55,6 +55,11 @@ $if(date)$
 $else$
 \date{}
 $endif$
+% ---- Statusfarben ----
+\definecolor{ok}{HTML}{C6EFCE}     % grün (OK)
+\definecolor{warn}{HTML}{FFEB9C}   % gelb (Hinweis)
+\definecolor{fail}{HTML}{F2DCDB}   % rot (Mangel)
+\definecolor{na}{gray}{0.90}       % grau (n. a.)
 
 \begin{document}
 $if(title)$
