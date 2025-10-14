@@ -41,7 +41,7 @@ jobs:
             --pdf-engine=pdflatex \
             --resource-path=".:docs" \
             -o "reports/begehung-${{ github.event.issue.number }}.pdf"
-          # Debug: LaTeX-Quelle mitschreiben
+          # Debug: LaTeX-Quelle mitschreiben (hilfreich bei Fehlern)
           pandoc report.md \
             --from=markdown+raw_tex+pipe_tables \
             --template=docs/template.latex \
