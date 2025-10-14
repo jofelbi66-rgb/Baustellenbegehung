@@ -1,28 +1,43 @@
 \documentclass[11pt,a4paper]{article}
+
+% Seitenlayout
 \usepackage[margin=2.2cm]{geometry}
+
+% Schriften (robust für pdflatex)
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+
+% Tabellen, Grafik, Kopf-/Fußzeilen, Links
+\usepackage{array, longtable, booktabs, tabularx}
 \usepackage{graphicx}
-\usepackage{array, longtable, booktabs}
-\usepackage{tabularx}
 \usepackage{fancyhdr}
 \usepackage{lastpage}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true, urlcolor=blue}
 
+% ---------- Logo-Einbindung (robust) ----------
+% Suche Ressourcen auch im ./ und im docs/-Ordner
+\graphicspath{{./}{docs/}}
+
+% Hilfsbefehl: nimmt logo.png oder logo.jpg aus docs/, falls vorhanden
+\newcommand{\HeaderLogo}{%
+  \IfFileExists{docs/logo.png}{\includegraphics[height=1.2cm]{logo.png}}{%
+    \IfFileExists{docs/logo.jpg}{\includegraphics[height=1.2cm]{logo.jpg}}{}%
+  }%
+}
+% ---------------------------------------------
+
+% Kopf-/Fußzeile
 \pagestyle{fancy}
-\fancyhf{} % clear header/footer
-% Logo rechts in der Kopfzeile, falls vorhanden
-\IfFileExists{docs/logo.png}{%
-  \fancyhead[R]{\includegraphics[height=1.2cm]{docs/logo.png}}
-}{}
+\fancyhf{} % clear
 \fancyhead[L]{\footnotesize Baustellenbegehung}
+\fancyhead[R]{\HeaderLogo}
 \fancyfoot[L]{\footnotesize Erstellt: \today}
 \fancyfoot[R]{\footnotesize Seite \thepage/\pageref{LastPage}}
 
+% Absätze/Tabellenabstände
 \setlength{\parskip}{6pt}
 \setlength{\parindent}{0pt}
-
 \renewcommand{\arraystretch}{1.2}
 
 $if(title)$
@@ -45,3 +60,4 @@ $endif$
 $body$
 
 \end{document}
+
