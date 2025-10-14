@@ -3,6 +3,10 @@ on:
   issues:
     types: [labeled]
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   build-report:
     if: contains(github.event.label.name, 'begehung')
@@ -16,25 +20,28 @@ jobs:
             ${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.issue.number }} \
             | jq -r '.body' > issue_body.md
 
-      - name: Install pandoc + LaTeX
+      - name: Install pandoc + LaTeX + Python
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y pandoc texlive-latex-recommended texlive-fonts-recommended jq curl
+          sudo apt-get install -y pandoc texlive-latex-recommended texlive-fonts-recommended \
+            texlive-latex-extra jq curl python3
 
-      - name: Render Markdown → PDF
+      - name: Render Markdown aus Issue (Tabellen)
+        run: |
+          python3 scripts/render_report.py
+
+      - name: PDF bauen (Logo in Kopfzeile, jede Seite)
         run: |
           mkdir -p reports
-          echo "# Begehungsbericht" > report.md
-          echo "" >> report.md
-          echo "Issue: #${{ github.event.issue.number }} — ${{ github.event.issue.title }}" >> report.md
-          echo "" >> report.md
-          echo "---" >> report.md
-          echo "" >> report.md
-          cat issue_body.md >> report.md
-          pandoc report.md -o reports/begehung-${{ github.event.issue.number }}.pdf
+          pandoc report.md \
+            --from=gfm \
+            --template=docs/template.latex \
+            --pdf-engine=xelatex \
+            -o reports/begehung-${{ github.event.issue.number }}.pdf
 
       - name: Artefakt hochladen
         uses: actions/upload-artifact@v4
         with:
           name: begehung-${{ github.event.issue.number }}.pdf
           path: reports/begehung-${{ github.event.issue.number }}.pdf
+
