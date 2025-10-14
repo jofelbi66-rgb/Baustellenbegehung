@@ -20,11 +20,13 @@ jobs:
             ${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.issue.number }} \
             | jq -r '.body' > issue_body.md
 
-      - name: Install pandoc + LaTeX + Python
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y pandoc texlive-latex-recommended texlive-fonts-recommended \
-           texlive-latex-extra texlive-lm python3
+     - name: Install pandoc + LaTeX + Python
+  run: |
+    sudo apt-get update -y
+    sudo apt-get install -y \
+      pandoc python3 \
+      texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
+      fonts-lmodern
 
       - name: Render Markdown aus Issue (Tabellen)
         run: |
