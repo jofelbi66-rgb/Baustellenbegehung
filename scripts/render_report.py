@@ -132,7 +132,9 @@ md.append(
 )
 
 # Legende
-md.append("> **Legende:** \\(\\cellcolor{ok} OK\\)  \\(\\cellcolor{warn} Hinweis\\)  \\(\\cellcolor{fail} Mangel\\)  \\(\\cellcolor{na} n.\\,a.\\)")
+# Legende (Textmodus, keine \( ... \) Klammern)
+md.append(r'> **Legende:** {\colorbox{ok}{\strut OK}}  {\colorbox{warn}{\strut Hinweis}}  {\colorbox{fail}{\strut Mangel}}  {\colorbox{na}{\strut n.\,a.}}')
+
 
 # Checkliste
 md.append("\n## Checkliste")
