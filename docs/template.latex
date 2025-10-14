@@ -1,0 +1,47 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{fontspec} % xelatex
+\setmainfont{DejaVu Serif}
+\usepackage{graphicx}
+\usepackage{array, longtable, booktabs}
+\usepackage{tabularx}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, urlcolor=blue}
+
+\pagestyle{fancy}
+\fancyhf{} % clear header/footer
+% Logo rechts in der Kopfzeile, falls vorhanden
+\IfFileExists{docs/logo.png}{%
+  \fancyhead[R]{\includegraphics[height=1.2cm]{docs/logo.png}}
+}{}
+\fancyhead[L]{\footnotesize Baustellenbegehung}
+\fancyfoot[L]{\footnotesize Erstellt: \today}
+\fancyfoot[R]{\footnotesize Seite \thepage/\pageref{LastPage}}
+
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+
+\renewcommand{\arraystretch}{1.2}
+
+$if(title)$
+\title{$title$}
+$endif$
+$if(author)$
+\author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$else$
+\date{}
+$endif$
+
+\begin{document}
+$if(title)$
+\maketitle
+$endif$
+
+$body$
+
+\end{document}
