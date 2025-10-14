@@ -228,11 +228,12 @@ body:
     attributes:
       label: Mangel 2 – Frist (YYYY-MM-DD)
 
-  - type: attachments
+    - type: textarea
     id: photos
     attributes:
-      label: Fotos
-      description: Füge aussagekräftige Bilder hinzu (Mobil-Upload möglich).
+      label: Fotos (optional)
+      description: Füge Bild-Links ein ODER lade die Fotos nach dem Erstellen des Issues per Drag & Drop in das Issue hoch.
+      placeholder: "z. B. Bild 1: ..., Bild 2: ..."
 
   - type: dropdown
     id: overall
