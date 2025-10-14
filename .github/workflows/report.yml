@@ -36,7 +36,7 @@ jobs:
           pandoc report.md \
             --from=gfm \
             --template=docs/template.latex \
-            --pdf-engine=xelatex \
+            --pdf-engine=lualatex \
             -o reports/begehung-${{ github.event.issue.number }}.pdf
 
       - name: Artefakt hochladen
