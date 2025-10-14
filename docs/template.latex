@@ -13,6 +13,7 @@
 
 % ---------- Tabellen, Grafiken, Kopf/Fuß ----------
 \usepackage{array, longtable, booktabs, tabularx}
+\usepackage[table]{xcolor}
 \usepackage{graphicx}
 \usepackage{fancyhdr}
 \usepackage{lastpage}
@@ -20,8 +21,6 @@
 \hypersetup{colorlinks=true, urlcolor=blue, linkcolor=black}
 
 % ---------- Logo + Kopfzeile ----------
-\usepackage{graphicx}
-
 \newcommand{\HeaderLogo}{%
   \IfFileExists{docs/logo.png}{
     \includegraphics[height=1.2cm]{docs/logo.png}
@@ -38,8 +37,6 @@
 \fancyhead[R]{\HeaderLogo}
 \fancyfoot[L]{\scriptsize Erstellt: \today}
 \fancyfoot[R]{\scriptsize Seite \thepage\ / \pageref{LastPage}}
-\renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\footrulewidth}{0.4pt}
 \setlength{\headheight}{22pt} % genug Platz fürs Logo
 
 % ---------- Überschriften ----------
