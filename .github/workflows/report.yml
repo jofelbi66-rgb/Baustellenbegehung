@@ -87,6 +87,32 @@ jobs:
             -o "reports/begehung-${{ steps.meta.outputs.num }}.pdf"
           echo "Pandoc exit code: $?"
           set -e
+      - name: Send report via Gmail SMTP
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}   # smtp.gmail.com
+          server_port: ${{ secrets.SMTP_PORT }}        # 587
+          username: ${{ secrets.SMTP_USERNAME }}       # deinname@gmail.com
+          password: ${{ secrets.SMTP_PASSWORD }}       # App-Passwort
+          subject: "Begehungsbericht #${{ steps.meta.outputs.num }}"
+          from: ${{ secrets.MAIL_FROM }}
+          to: ${{ secrets.HSE_TO }}
+          content_type: text/plain
+          body: |
+            Guten Tag,
+
+            anbei der Begehungsbericht #${{ steps.meta.outputs.num }}.
+            'todos.csv' enthält alle Mängel mit Verantwortlichen und Fristen.
+
+            Issue-Link:
+            ${{ github.server_url }}/${{ github.repository }}/issues/${{ steps.meta.outputs.num }}
+
+            Viele Grüße
+            Automatischer HSE-Bericht
+          attachments: |
+            reports/begehung-${{ steps.meta.outputs.num }}.pdf
+            reports/todos.csv
 
       - name: Upload artifacts (always)
         if: always()
