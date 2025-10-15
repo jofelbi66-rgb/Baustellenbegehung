@@ -103,7 +103,7 @@ jobs:
           echo "Pandoc exit code: $?"
           set -e
 
-      # --- E-Mail mit Anhang via Gmail (Python SMTP) ---
+           # --- E-Mail mit Anhang via Gmail (Python SMTP) ---
       - name: Send report via Gmail (Python SMTP, mit Anhängen)
         if: always()
         env:
@@ -117,9 +117,11 @@ jobs:
           REPO: ${{ github.repository }}
           SERVER_URL: ${{ github.server_url }}
         run: |
-          python3 - <<'PY'
+          set -e
+          cat > send_mail.py << 'PY'
           import os, smtplib, ssl, mimetypes
           from email.message import EmailMessage
+
           server   = os.environ["SMTP_SERVER"]
           port     = int(os.environ["SMTP_PORT"])
           user     = os.environ["SMTP_USERNAME"]
@@ -129,46 +131,51 @@ jobs:
           issue    = os.environ.get("ISSUE_NUM","")
           repo     = os.environ.get("REPO","")
           base_url = os.environ.get("SERVER_URL","https://github.com")
+
           subject = f"Begehungsbericht #{issue}"
-          body = f"""Guten Tag,
+          body = (
+              "Guten Tag,\n\n"
+              f"anbei der Begehungsbericht #{issue}.\n"
+              "Die Datei 'todos.csv' enthält die To-Do-Liste.\n\n"
+              "Issue-Link:\n"
+              f"{base_url}/{repo}/issues/{issue}\n\n"
+              "Viele Grüße\n"
+              "Automatischer HSE-Bericht\n"
+          )
 
-anbei der Begehungsbericht #{issue}.
-Die Datei 'todos.csv' enthält die To-Do-Liste.
-
-Issue-Link:
-{base_url}/{repo}/issues/{issue}
-
-Viele Grüße
-Automatischer HSE-Bericht
-"""
           files = [
-            (f"reports/begehung-{issue}.pdf", "application/pdf"),
-            ("reports/todos.csv", "text/csv"),
+              (f"reports/begehung-{issue}.pdf", "application/pdf"),
+              ("reports/todos.csv", "text/csv"),
           ]
+
           msg = EmailMessage()
           msg["Subject"] = subject
           msg["From"] = sender
           msg["To"] = ", ".join(tos)
           msg.set_content(body)
+
           for path, fallback in files:
-            if not os.path.exists(path):
-              print(f"[MAIL] Datei nicht gefunden, wird übersprungen: {path}")
-              continue
-            ctype, _ = mimetypes.guess_type(path)
-            maintype, subtype = (ctype or fallback).split("/", 1)
-            with open(path, "rb") as f:
-              data = f.read()
-            msg.add_attachment(data, maintype=maintype, subtype=subtype,
-                               filename=os.path.basename(path))
-            print(f"[MAIL] Angehängt: {path}")
+              if not os.path.exists(path):
+                  print(f"[MAIL] Datei nicht gefunden, wird übersprungen: {path}")
+                  continue
+              ctype, _ = mimetypes.guess_type(path)
+              maintype, subtype = (ctype or fallback).split("/", 1)
+              with open(path, "rb") as f:
+                  data = f.read()
+              msg.add_attachment(data, maintype=maintype, subtype=subtype,
+                                 filename=os.path.basename(path))
+              print(f"[MAIL] Angehängt: {path}")
+
           ctx = ssl.create_default_context()
           with smtplib.SMTP(server, port) as smtp:
-            smtp.ehlo()
-            smtp.starttls(context=ctx)
-            smtp.login(user, pwd)
-            smtp.send_message(msg)
-            print("[MAIL] Nachricht gesendet.")
+              smtp.ehlo()
+              smtp.starttls(context=ctx)
+              smtp.login(user, pwd)
+              smtp.send_message(msg)
+              print("[MAIL] Nachricht gesendet.")
           PY
+
+          python3 send_mail.py
 
       # --- Artefakte hochladen (auch bei Fehlern) ---
       - name: Upload artifacts (always)
