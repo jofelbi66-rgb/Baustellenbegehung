@@ -1,72 +1,48 @@
 \documentclass[11pt,a4paper]{article}
 
-% ---------- Seitenlayout & Schrift ----------
-\usepackage[margin=2.5cm,top=3.0cm,bottom=2.5cm]{geometry}
+% --- Layout & Schrift ---
+\usepackage[margin=2.5cm]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{helvet}               % sachlich-serifenlos
+\usepackage{helvet}
 \renewcommand{\familydefault}{\sfdefault}
 \usepackage{setspace}
-\setstretch{1.15}                 % Achtung: Punkt, keine weiteren Zeichen!
-\setlength{\fboxsep}{6pt} % Padding für \colorbox (Status-Balken)
+\setstretch{1.15}
 
-% ---------- Farben, Tabellen, Links ----------
+% --- Tabellen, Farben, Links, Grafiken ---
 \usepackage[table]{xcolor}
-\usepackage{colortbl}
-\usepackage{array, longtable, booktabs, tabularx}
+\usepackage{array,longtable,booktabs,tabularx}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true, urlcolor=blue, linkcolor=black}
 
-% ---------- Grafiken & Kopf-/Fußzeilen ----------
-\usepackage{graphicx}
-\usepackage{fancyhdr}
-\usepackage{lastpage}
+% --- Statusfarben (Zellhintergrund) ---
+\definecolor{ok}{HTML}{C6EFCE}     % grün
+\definecolor{warn}{HTML}{FFEB9C}   % gelb
+\definecolor{fail}{HTML}{F2DCDB}   % rot
+\definecolor{na}{gray}{0.9}        % grau
 
-% Logo-Funktion (nimmt PNG oder JPG, wenn vorhanden)
+% Logo oben rechts (Titel)
 \newcommand{\HeaderLogo}{%
   \IfFileExists{docs/logo.png}{\includegraphics[height=1.1cm]{docs/logo.png}}{%
     \IfFileExists{docs/logo.jpg}{\includegraphics[height=1.1cm]{docs/logo.jpg}}{}%
   }%
 }
 
-% Kopf-/Fußzeile
-\pagestyle{fancy}
-\fancyhf{} % clear
-\fancyhead[L]{\textbf{\footnotesize Baustellenbegehung}}
-\fancyhead[R]{\HeaderLogo}
-\fancyfoot[L]{\scriptsize Erstellt: \today}
-\fancyfoot[R]{\scriptsize Seite \thepage\ /\ \pageref{LastPage}}
-\renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\footrulewidth}{0.4pt}
-\setlength{\headheight}{28pt}   % höherer Kopfbereich
-\setlength{\headsep}{18pt}      % Abstand Kopf → Text
-
-% Dezente Tabellenoptik
-\definecolor{tblhead}{RGB}{240,240,240}
-% \AtBeginEnvironment{longtable}{\rowcolors{2}{gray!10}{white}}
-
-
-% ---------- Dokument-Metadaten ----------
+% --- Metadaten aus Pandoc ---
 $if(title)$
 \title{\textbf{\Large $title$}}
-$endif$
-$if(author)$
-\author{$author$}
 $endif$
 $if(date)$
 \date{$date$}
 $else$
 \date{}
 $endif$
-% ---- Statusfarben ----
-\definecolor{ok}{HTML}{C6EFCE}     % grün (OK)
-\definecolor{warn}{HTML}{FFEB9C}   % gelb (Hinweis)
-\definecolor{fail}{HTML}{F2DCDB}   % rot (Mangel)
-\definecolor{na}{gray}{0.90}       % grau (n. a.)
 
 \begin{document}
+
 $if(title)$
+\noindent\makebox[\textwidth][r]{\HeaderLogo}\\[-1.2cm]
 \maketitle
-\thispagestyle{fancy} % Titelseite mit Kopfzeile (Logo)
 $endif$
 
 $body$
