@@ -88,13 +88,11 @@ jobs:
       -o "reports/begehung-${{ steps.meta.outputs.num }}.pdf"
     echo "Pandoc exit code: $?"
     set -e
-
 - name: Upload artifacts (auch bei Fehler)
   if: always()
   uses: actions/upload-artifact@v4
   with:
-    name: begehung-${{ steps.meta.outputs.num }}
-    path: |
-      reports/debug-${{ steps.meta.outputs.num }}.tex
-      reports/begehung-${{ steps.meta.outputs.num }}.pdf
+    name: begehung-${{ steps.meta.outputs.num || github.event.issue.number }}
+    path: reports/
     if-no-files-found: warn
+
