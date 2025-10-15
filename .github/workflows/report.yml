@@ -1,17 +1,30 @@
 name: Build Begehungsbericht
 
-
+on:
+  workflow_dispatch:
     inputs:
       issue_number:
         description: "Issue number"
-        required: true
-on:
+        required: false
   issues:
     types: [labeled]
-  workflow_dispatch:
 
 permissions:
   contents: read
+
+jobs:
+  build:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || (github.event_name == 'issues'
+              && github.event.action == 'labeled'
+              && github.event.label.name == 'begehung') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
 
 jobs:
   build:
