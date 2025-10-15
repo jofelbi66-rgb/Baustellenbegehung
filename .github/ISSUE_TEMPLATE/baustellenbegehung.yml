@@ -1,6 +1,55 @@
-# =========================
-# 1) CHECKLISTE (mit Fotos)
-# =========================
+name: "Baustellenbegehung"
+description: "Formular zur Erfassung einer Baustellenbegehung – inklusive Fotodokumentation und automatischem PDF-Bericht."
+title: "[Begehung] Projektname – Datum"
+labels:
+  - begehung
+body:
+
+# ======================
+# 0) Allgemeine Angaben
+# ======================
+
+- type: markdown
+  attributes:
+    value: |
+      ## Baustellenbegehung
+      Bitte alle relevanten Felder ausfüllen. Fotos können direkt mit dem Smartphone aufgenommen und eingefügt werden.
+
+- type: input
+  id: ort
+  attributes:
+    label: Ort / Baustelle
+    placeholder: "z. B. Köln-Deutz, Baustelle Wehr XYZ"
+  validations:
+    required: true
+
+- type: input
+  id: datum
+  attributes:
+    label: Datum
+    placeholder: "JJJJ-MM-TT"
+  validations:
+    required: true
+
+- type: input
+  id: sifa
+  attributes:
+    label: Sifa / Ersteller
+    placeholder: "Name der Fachkraft"
+  validations:
+    required: true
+
+- type: textarea
+  id: wetter
+  attributes:
+    label: Wetterbedingungen
+    placeholder: "z. B. bewölkt, 15 °C, leicht windig"
+  validations:
+    required: false
+
+# ======================
+# 1) Checkliste mit Fotos
+# ======================
 
 - type: markdown
   attributes:
@@ -11,11 +60,7 @@
   id: status_psa
   attributes:
     label: PSA & Zutritt
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -31,8 +76,8 @@
   id: fotos_psa
   attributes:
     label: PSA & Zutritt – Fotos/Nachweise
-    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**. Mehrere Fotos nacheinander möglich."
-    placeholder: "Foto 1 …\nFoto 2 …"
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …"
   validations:
     required: false
 
@@ -42,11 +87,7 @@
   id: status_ord
   attributes:
     label: Ordnung & Sauberkeit
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -54,7 +95,6 @@
   id: bemerk_ord
   attributes:
     label: Ordnung & Sauberkeit – Bemerkungen
-    placeholder: "Kurzbeschreibung, Beobachtungen …"
   validations:
     required: false
 
@@ -63,7 +103,6 @@
   attributes:
     label: Ordnung & Sauberkeit – Fotos/Nachweise
     description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
-    placeholder: "Foto 1 …\nFoto 2 …"
   validations:
     required: false
 
@@ -73,11 +112,7 @@
   id: status_verkehr
   attributes:
     label: Verkehrswege & Absperrungen
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -85,7 +120,6 @@
   id: bemerk_verkehr
   attributes:
     label: Verkehrswege & Absperrungen – Bemerkungen
-    placeholder: "Kurzbeschreibung, Beobachtungen …"
   validations:
     required: false
 
@@ -94,7 +128,6 @@
   attributes:
     label: Verkehrswege & Absperrungen – Fotos/Nachweise
     description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
-    placeholder: "Foto 1 …\nFoto 2 …"
   validations:
     required: false
 
@@ -104,11 +137,7 @@
   id: status_erd
   attributes:
     label: Erdarbeiten / Gräben / Wasserbau
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -116,7 +145,6 @@
   id: bemerk_erd
   attributes:
     label: Erdarbeiten / Gräben / Wasserbau – Bemerkungen
-    placeholder: "Kurzbeschreibung, Beobachtungen …"
   validations:
     required: false
 
@@ -125,7 +153,6 @@
   attributes:
     label: Erdarbeiten / Gräben / Wasserbau – Fotos/Nachweise
     description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
-    placeholder: "Foto 1 …\nFoto 2 …"
   validations:
     required: false
 
@@ -135,11 +162,7 @@
   id: status_gerueste
   attributes:
     label: Gerüste & Leitern
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -147,7 +170,6 @@
   id: bemerk_gerueste
   attributes:
     label: Gerüste & Leitern – Bemerkungen
-    placeholder: "Kurzbeschreibung, Beobachtungen …"
   validations:
     required: false
 
@@ -156,7 +178,6 @@
   attributes:
     label: Gerüste & Leitern – Fotos/Nachweise
     description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
-    placeholder: "Foto 1 …\nFoto 2 …"
   validations:
     required: false
 
@@ -166,11 +187,7 @@
   id: status_krane
   attributes:
     label: Krane & Hebezeuge / Anschlagmittel
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -178,7 +195,6 @@
   id: bemerk_krane
   attributes:
     label: Krane & Hebezeuge / Anschlagmittel – Bemerkungen
-    placeholder: "Kurzbeschreibung, Beobachtungen …"
   validations:
     required: false
 
@@ -187,7 +203,6 @@
   attributes:
     label: Krane & Hebezeuge / Anschlagmittel – Fotos/Nachweise
     description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
-    placeholder: "Foto 1 …\nFoto 2 …"
   validations:
     required: false
 
@@ -197,11 +212,7 @@
   id: status_maschinen
   attributes:
     label: Maschinen & Geräte (inkl. Teleskopstapler)
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -209,7 +220,6 @@
   id: bemerk_maschinen
   attributes:
     label: Maschinen & Geräte (inkl. Teleskopstapler) – Bemerkungen
-    placeholder: "Kurzbeschreibung, Beobachtungen …"
   validations:
     required: false
 
@@ -218,7 +228,6 @@
   attributes:
     label: Maschinen & Geräte (inkl. Teleskopstapler) – Fotos/Nachweise
     description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
-    placeholder: "Foto 1 …\nFoto 2 …"
   validations:
     required: false
 
@@ -228,11 +237,7 @@
   id: status_elektrik
   attributes:
     label: Elektrik & Beleuchtung
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -240,7 +245,6 @@
   id: bemerk_elektrik
   attributes:
     label: Elektrik & Beleuchtung – Bemerkungen
-    placeholder: "Kurzbeschreibung, Beobachtungen …"
   validations:
     required: false
 
@@ -249,7 +253,6 @@
   attributes:
     label: Elektrik & Beleuchtung – Fotos/Nachweise
     description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
-    placeholder: "Foto 1 …\nFoto 2 …"
   validations:
     required: false
 
@@ -259,11 +262,7 @@
   id: status_gefahr
   attributes:
     label: Gefahrstoffe / Umweltschutz
-    options:
-      - OK
-      - Hinweis
-      - Mangel
-      - n.a.
+    options: [OK, Hinweis, Mangel, n.a.]
   validations:
     required: false
 
@@ -271,7 +270,6 @@
   id: bemerk_gefahr
   attributes:
     label: Gefahrstoffe / Umweltschutz – Bemerkungen
-    placeholder: "Kurzbeschreibung, Beobachtungen …"
   validations:
     required: false
 
@@ -280,6 +278,23 @@
   attributes:
     label: Gefahrstoffe / Umweltschutz – Fotos/Nachweise
     description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
-    placeholder: "Foto 1 …\nFoto 2 …"
   validations:
     required: false
+
+
+# ======================
+# 2) Zusammenfassung / Freitext
+# ======================
+
+- type: markdown
+  attributes:
+    value: "## 2. Zusammenfassung"
+
+- type: textarea
+  id: zusammenfassung
+  attributes:
+    label: Gesamteindruck / Hinweise / Maßnahmen
+    placeholder: "Freitext – Gesamte Bewertung oder wichtige Punkte"
+  validations:
+    required: false
+
