@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: "Issue-Nummer (z. B. 12)"
+        description: "Issue number"
         required: true
 
 permissions:
@@ -15,8 +15,14 @@ permissions:
 
 jobs:
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'begehung' }}
+    # robust: nur beim manuellen Start ODER beim Label "begehung" auf Issues
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'begehung')
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
 
     steps:
       - name: Checkout repository
