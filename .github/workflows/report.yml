@@ -87,32 +87,78 @@ jobs:
             -o "reports/begehung-${{ steps.meta.outputs.num }}.pdf"
           echo "Pandoc exit code: $?"
           set -e
-      - name: Send report via Gmail SMTP
-        if: always()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.SMTP_SERVER }}   # smtp.gmail.com
-          server_port: ${{ secrets.SMTP_PORT }}        # 587
-          username: ${{ secrets.SMTP_USERNAME }}       # deinname@gmail.com
-          password: ${{ secrets.SMTP_PASSWORD }}       # App-Passwort
-          subject: "Begehungsbericht #${{ steps.meta.outputs.num }}"
-          from: ${{ secrets.MAIL_FROM }}
-          to: ${{ secrets.HSE_TO }}
-          content_type: text/plain
-          body: |
-            Guten Tag,
+     - name: Send report via Gmail (Python SMTP, mit Anhängen)
+  if: always()
+  env:
+    SMTP_SERVER: ${{ secrets.SMTP_SERVER }}   # smtp.gmail.com
+    SMTP_PORT: ${{ secrets.SMTP_PORT }}       # 587
+    SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}   # deinname@gmail.com
+    SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}   # App-Passwort
+    MAIL_FROM: ${{ secrets.MAIL_FROM }}           # HSE Bot <deinname@gmail.com>
+    HSE_TO: ${{ secrets.HSE_TO }}                 # Empfänger, Komma-getrennt
+    ISSUE_NUM: ${{ steps.meta.outputs.num }}
+    REPO: ${{ github.repository }}
+    SERVER_URL: ${{ github.server_url }}
+  run: |
+    python3 - <<'PY'
+    import os, smtplib, ssl, mimetypes
+    from email.message import EmailMessage
 
-            anbei der Begehungsbericht #${{ steps.meta.outputs.num }}.
-            'todos.csv' enthält alle Mängel mit Verantwortlichen und Fristen.
+    server   = os.environ["SMTP_SERVER"]
+    port     = int(os.environ["SMTP_PORT"])
+    user     = os.environ["SMTP_USERNAME"]
+    pwd      = os.environ["SMTP_PASSWORD"]
+    sender   = os.environ["MAIL_FROM"]
+    tos      = [a.strip() for a in os.environ.get("HSE_TO","").split(",") if a.strip()]
+    issue    = os.environ.get("ISSUE_NUM","")
+    repo     = os.environ.get("REPO","")
+    base_url = os.environ.get("SERVER_URL","https://github.com")
 
-            Issue-Link:
-            ${{ github.server_url }}/${{ github.repository }}/issues/${{ steps.meta.outputs.num }}
+    subject = f"Begehungsbericht #{issue}"
+    body = f"""Guten Tag,
 
-            Viele Grüße
-            Automatischer HSE-Bericht
-          attachments: |
-            reports/begehung-${{ steps.meta.outputs.num }}.pdf
-            reports/todos.csv
+anbei der Begehungsbericht #{issue}.
+Die Datei 'todos.csv' enthält die To-Do-Liste.
+
+Issue-Link:
+{base_url}/{repo}/issues/{issue}
+
+Viele Grüße
+Automatischer HSE-Bericht
+"""
+
+    # Dateien anhängen (nur wenn vorhanden)
+    attachments = [
+      (f"reports/begehung-{issue}.pdf", "application/pdf"),
+      ("reports/todos.csv", "text/csv"),
+    ]
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = ", ".join(tos)
+    msg.set_content(body)
+
+    for path, fallback_type in attachments:
+        if not os.path.exists(path):
+            print(f"[MAIL] Datei nicht gefunden, wird übersprungen: {path}")
+            continue
+        ctype, enc = mimetypes.guess_type(path)
+        maintype, subtype = (ctype or fallback_type).split("/", 1)
+        with open(path, "rb") as f:
+            data = f.read()
+        msg.add_attachment(data, maintype=maintype, subtype=subtype,
+                           filename=os.path.basename(path))
+        print(f"[MAIL] Angehängt: {path}")
+
+    ctx = ssl.create_default_context()
+    with smtplib.SMTP(server, port) as smtp:
+        smtp.ehlo()
+        smtp.starttls(context=ctx)
+        smtp.login(user, pwd)
+        smtp.send_message(msg)
+        print("[MAIL] Nachricht gesendet.")
+    PY
 
       - name: Upload artifacts (always)
         if: always()
