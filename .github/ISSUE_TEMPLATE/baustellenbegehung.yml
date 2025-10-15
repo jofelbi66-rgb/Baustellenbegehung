@@ -1,264 +1,285 @@
-name: Baustellenbegehung
-description: Begehung erfassen (OK/Mangel/NA, Foto, Schweregrad, Frist)
-title: "[Begehung] "
-labels: ["begehung", "neu"]
-body:
-  - type: input
-    id: site
-    attributes:
-      label: Baustelle / Standort
-      description: Projekt-/Baustellenname
-      placeholder: z. B. Wehr XYZ – Los 2
-    validations:
-      required: true
+# =========================
+# 1) CHECKLISTE (mit Fotos)
+# =========================
 
-  - type: input
-    id: project
-    attributes:
-      label: Projekt / Bauvorhaben
-      placeholder: z. B. Wasserbau – Spundwand-Erneuerung
+- type: markdown
+  attributes:
+    value: "## 1. Checkliste"
 
-  - type: input
-    id: section
-    attributes:
-      label: Abschnitt/Bereich
-      placeholder: z. B. Uferabschnitt A, Kranstandplatz, Graben 3
+# --- PSA & Zutritt ---
+- type: dropdown
+  id: status_psa
+  attributes:
+    label: PSA & Zutritt
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
 
-  - type: input
-    id: coords
-    attributes:
-      label: GPS (optional)
-      placeholder: 50.921, 6.362 (Lat, Lon)
+- type: textarea
+  id: bemerk_psa
+  attributes:
+    label: PSA & Zutritt – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
 
-  - type: dropdown
-    id: begehungsart
-    attributes:
-      label: Begehungsart
-      options:
-        - Erstbegehung
-        - Folgebegehung
-        - Abnahme
-        - Ad-hoc
-    validations:
-      required: true
-
-  - type: input
-    id: date
-    attributes:
-      label: Datum & Uhrzeit
-      placeholder: 2025-10-13 09:30
-    validations:
-      required: true
-
-  - type: textarea
-    id: team
-    attributes:
-      label: Beteiligte
-      description: Bauleiter, Polier, Fremdfirmen, Sifa etc.
-      placeholder: z. B. H. Maier (Bauleiter), F. Özdemir (Polier)
-
-  - type: dropdown
-    id: weather
-    attributes:
-      label: Witterung (optional)
-      options: [trocken, Regen, Schnee, Wind, Hitze, Frost]
-
-  - type: markdown
-    attributes:
-      value: |
-        ## Checkliste – Status je Kategorie (OK / Mangel / n. a.)
-        Wähle den Status pro Kategorie und beschreibe Mängel im jeweiligen Feld. Fotos unten anhängen.
-
-  - type: dropdown
-    id: ppe_status
-    attributes:
-      label: PSA & Zutritt
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: ppe_notes
-    attributes:
-      label: PSA – Bemerkungen
-      placeholder: Helm, Schutzbrille, Warnkleidung, Zugangskontrolle, Unterweisung
-
-  - type: dropdown
-    id: housekeeping_status
-    attributes:
-      label: Ordnung & Sauberkeit
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: housekeeping_notes
-    attributes:
-      label: Ordnung & Sauberkeit – Bemerkungen
-
-  - type: dropdown
-    id: traffic_status
-    attributes:
-      label: Verkehrswege & Absperrungen
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: traffic_notes
-    attributes:
-      label: Verkehrswege – Bemerkungen
-
-  - type: dropdown
-    id: excavation_status
-    attributes:
-      label: Erdarbeiten / Gräben / Wasserbau
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: excavation_notes
-    attributes:
-      label: Erdarbeiten – Bemerkungen
-
-  - type: dropdown
-    id: scaffolds_status
-    attributes:
-      label: Gerüste & Leitern
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: scaffolds_notes
-    attributes:
-      label: Gerüste & Leitern – Bemerkungen
-
-  - type: dropdown
-    id: lifting_status
-    attributes:
-      label: Krane & Hebezeuge / Anschlagmittel
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: lifting_notes
-    attributes:
-      label: Krane & Hebezeuge – Bemerkungen
-
-  - type: dropdown
-    id: machinery_status
-    attributes:
-      label: Maschinen & Geräte (inkl. Teleskopstapler)
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: machinery_notes
-    attributes:
-      label: Maschinen & Geräte – Bemerkungen
-
-  - type: dropdown
-    id: electrical_status
-    attributes:
-      label: Elektrik & Beleuchtung
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: electrical_notes
-    attributes:
-      label: Elektrik – Bemerkungen
-
-  - type: dropdown
-    id: chemicals_status
-    attributes:
-      label: Gefahrstoffe / Umweltschutz
-      options: [OK, Mangel, n. a.]
-    validations:
-      required: true
-  - type: textarea
-    id: chemicals_notes
-    attributes:
-      label: Gefahrstoffe – Bemerkungen
-
-  - type: markdown
-    attributes:
-      value: "## Mängel (Vorlagenfelder 1–5; bei Bedarf nach dem Erstellen erweitern)"
-
-  - type: dropdown
-    id: defect1_severity
-    attributes:
-      label: Mangel 1 – Schweregrad
-      options: [gering, mittel, hoch, kritisch]
-  - type: input
-    id: defect1_location
-    attributes:
-      label: Mangel 1 – Ort/Bereich
-      placeholder: z. B. Graben 3 / Ufer A
-  - type: textarea
-    id: defect1_desc
-    attributes:
-      label: Mangel 1 – Beschreibung & Maßnahme
-  - type: input
-    id: defect1_owner
-    attributes:
-      label: Mangel 1 – Verantwortlich
-      placeholder: Firma/Person
-  - type: input
-    id: defect1_due
-    attributes:
-      label: Mangel 1 – Frist (YYYY-MM-DD)
-
-  - type: dropdown
-    id: defect2_severity
-    attributes:
-      label: Mangel 2 – Schweregrad
-      options: [gering, mittel, hoch, kritisch]
-  - type: input
-    id: defect2_location
-    attributes:
-      label: Mangel 2 – Ort/Bereich
-  - type: textarea
-    id: defect2_desc
-    attributes:
-      label: Mangel 2 – Beschreibung & Maßnahme
-  - type: input
-    id: defect2_owner
-    attributes:
-      label: Mangel 2 – Verantwortlich
-  - type: input
-    id: defect2_due
-    attributes:
-      label: Mangel 2 – Frist (YYYY-MM-DD)
-
-  - type: textarea
-    id: photos
-    attributes:
-      label: Fotos (optional)
-      description: |
-        Füge Bild-Links ein ODER lade die Fotos nach dem Erstellen des Issues direkt
-        im GitHub-Issue per Drag & Drop hoch.
-      placeholder: "z. B. Bild 1: Absperrung fehlt, Bild 2: Gerüst unvollständig"
+- type: textarea
+  id: fotos_psa
+  attributes:
+    label: PSA & Zutritt – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**. Mehrere Fotos nacheinander möglich."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
 
 
-  - type: dropdown
-    id: overall
-    attributes:
-      label: Gesamtbewertung
-      options: ["i. O.", "i. O. mit Auflagen", "nicht i. O."]
-      description: Entspricht Freigabe, Auflagen oder Stilllegung (analog Fahrzeugkontrolle ok/nicht ok).
-    validations:
-      required: true
+# --- Ordnung & Sauberkeit ---
+- type: dropdown
+  id: status_ord
+  attributes:
+    label: Ordnung & Sauberkeit
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
 
-  - type: input
-    id: sign
-    attributes:
-      label: Unterschrift/Name Prüfer
-      placeholder: J. Mustermann (Sifa)
-    validations:
-      required: true
+- type: textarea
+  id: bemerk_ord
+  attributes:
+    label: Ordnung & Sauberkeit – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
 
-  - type: checkboxes
-    id: confirm
-    attributes:
-      label: Bestätigung (Häkchen setzen)
-      options:
-        - label: Angaben geprüft und korrekt
-          required: true
+- type: textarea
+  id: fotos_ord
+  attributes:
+    label: Ordnung & Sauberkeit – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
+
+
+# --- Verkehrswege & Absperrungen ---
+- type: dropdown
+  id: status_verkehr
+  attributes:
+    label: Verkehrswege & Absperrungen
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
+
+- type: textarea
+  id: bemerk_verkehr
+  attributes:
+    label: Verkehrswege & Absperrungen – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
+
+- type: textarea
+  id: fotos_verkehr
+  attributes:
+    label: Verkehrswege & Absperrungen – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
+
+
+# --- Erdarbeiten / Gräben / Wasserbau ---
+- type: dropdown
+  id: status_erd
+  attributes:
+    label: Erdarbeiten / Gräben / Wasserbau
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
+
+- type: textarea
+  id: bemerk_erd
+  attributes:
+    label: Erdarbeiten / Gräben / Wasserbau – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
+
+- type: textarea
+  id: fotos_erd
+  attributes:
+    label: Erdarbeiten / Gräben / Wasserbau – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
+
+
+# --- Gerüste & Leitern ---
+- type: dropdown
+  id: status_gerueste
+  attributes:
+    label: Gerüste & Leitern
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
+
+- type: textarea
+  id: bemerk_gerueste
+  attributes:
+    label: Gerüste & Leitern – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
+
+- type: textarea
+  id: fotos_gerueste
+  attributes:
+    label: Gerüste & Leitern – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
+
+
+# --- Krane & Hebezeuge / Anschlagmittel ---
+- type: dropdown
+  id: status_krane
+  attributes:
+    label: Krane & Hebezeuge / Anschlagmittel
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
+
+- type: textarea
+  id: bemerk_krane
+  attributes:
+    label: Krane & Hebezeuge / Anschlagmittel – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
+
+- type: textarea
+  id: fotos_krane
+  attributes:
+    label: Krane & Hebezeuge / Anschlagmittel – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
+
+
+# --- Maschinen & Geräte (inkl. Teleskopstapler) ---
+- type: dropdown
+  id: status_maschinen
+  attributes:
+    label: Maschinen & Geräte (inkl. Teleskopstapler)
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
+
+- type: textarea
+  id: bemerk_maschinen
+  attributes:
+    label: Maschinen & Geräte (inkl. Teleskopstapler) – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
+
+- type: textarea
+  id: fotos_maschinen
+  attributes:
+    label: Maschinen & Geräte (inkl. Teleskopstapler) – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
+
+
+# --- Elektrik & Beleuchtung ---
+- type: dropdown
+  id: status_elektrik
+  attributes:
+    label: Elektrik & Beleuchtung
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
+
+- type: textarea
+  id: bemerk_elektrik
+  attributes:
+    label: Elektrik & Beleuchtung – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
+
+- type: textarea
+  id: fotos_elektrik
+  attributes:
+    label: Elektrik & Beleuchtung – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
+
+
+# --- Gefahrstoffe / Umweltschutz ---
+- type: dropdown
+  id: status_gefahr
+  attributes:
+    label: Gefahrstoffe / Umweltschutz
+    options:
+      - OK
+      - Hinweis
+      - Mangel
+      - n.a.
+  validations:
+    required: false
+
+- type: textarea
+  id: bemerk_gefahr
+  attributes:
+    label: Gefahrstoffe / Umweltschutz – Bemerkungen
+    placeholder: "Kurzbeschreibung, Beobachtungen …"
+  validations:
+    required: false
+
+- type: textarea
+  id: fotos_gefahr
+  attributes:
+    label: Gefahrstoffe / Umweltschutz – Fotos/Nachweise
+    description: "Tippe hier hinein und wähle **Foto aufnehmen** / **Datei auswählen**."
+    placeholder: "Foto 1 …\nFoto 2 …"
+  validations:
+    required: false
