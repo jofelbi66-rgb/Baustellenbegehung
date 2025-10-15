@@ -22,21 +22,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
-      - name: Write issue body to file
-        run: |
-          cat > issue_body.md <<'EOF'
-          ${{ github.event.issue.body }}
-          EOF
+      # Issue-Nummer auflösen (manuell oder über Label-Event)
       - name: Resolve issue number
         id: meta
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "num=${{ inputs.issue_number }}" >> "$GITHUB_OUTPUT"
           else
-            echo "num=${{ steps.meta.outputs.num }}" >> "$GITHUB_OUTPUT"
+            echo "num=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
           fi
 
+      # Issue-Body holen (zuverlässig, auch bei manuellem Start)
       - name: Fetch issue body
         id: fetch
         uses: actions/github-script@v7
@@ -50,6 +46,7 @@ jobs:
             });
             core.setOutput('body', data.body || '');
 
+      # Body in Datei schreiben
       - name: Write issue body to file
         run: |
           cat > issue_body.md <<'EOF'
@@ -66,33 +63,35 @@ jobs:
         run: |
           python3 scripts/render_report.py
 
-   - name: Build PDF (immer mit Debug)
-  run: |
-    mkdir -p reports
+      # Immer erst .tex erzeugen, dann PDF (Fehler beim PDF brechen nicht ab)
+      - name: Build TeX and PDF
+        run: |
+          set -e
+          mkdir -p reports
 
-    echo "==> Schritt 1: Debug-LaTeX-Datei erzeugen"
-    pandoc report.md \
-      --from=markdown+raw_tex+pipe_tables \
-      --template=docs/template.latex \
-      --resource-path=".:docs" \
-      -t latex \
-      -o "reports/debug-${{ steps.meta.outputs.num }}.tex"
+          # 1) LaTeX-Quelle immer erzeugen
+          pandoc report.md \
+            --from=markdown+raw_tex+pipe_tables \
+            --template=docs/template.latex \
+            --resource-path=".:docs" \
+            -t latex \
+            -o "reports/debug-${{ steps.meta.outputs.num }}.tex"
 
-    echo "==> Schritt 2: PDF erzeugen (Fehler werden ignoriert)"
-    set +e
-    pandoc report.md \
-      --from=markdown+raw_tex+pipe_tables \
-      --template=docs/template.latex \
-      --pdf-engine=pdflatex \
-      --resource-path=".:docs" \
-      -o "reports/begehung-${{ steps.meta.outputs.num }}.pdf"
-    echo "Pandoc exit code: $?"
-    set -e
-- name: Upload artifacts (auch bei Fehler)
-  if: always()
-  uses: actions/upload-artifact@v4
-  with:
-    name: begehung-${{ steps.meta.outputs.num || github.event.issue.number }}
-    path: reports/
-    if-no-files-found: warn
+          # 2) PDF versuchen – Fehler nicht abbrechen
+          set +e
+          pandoc report.md \
+            --from=markdown+raw_tex+pipe_tables \
+            --template=docs/template.latex \
+            --pdf-engine=pdflatex \
+            --resource-path=".:docs" \
+            -o "reports/begehung-${{ steps.meta.outputs.num }}.pdf"
+          echo "Pandoc exit code: $?"
+          set -e
 
+      - name: Upload artifacts (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: begehung-${{ steps.meta.outputs.num }}
+          path: reports/
+          if-no-files-found: warn
