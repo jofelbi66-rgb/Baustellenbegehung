@@ -1,49 +1,86 @@
-import re, csv, os
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+render_report.py
+----------------
+Liest den Issue-Body (issue_body.md), baut daraus:
+  - report.md  (Pandoc-Quelle für PDF, inkl. Fotos je Kategorie)
+  - reports/todos.csv (To-Do-Liste der Mängel)
+
+Voraussetzung:
+  - Die Issue-Form verwendet exakt die Label-Texte aus baustellenbegehung.yml
+  - Workflow schreibt zuvor den Body in 'issue_body.md'
+"""
+
+import os
+import re
+import csv
 from datetime import date
 
-# ---------- Helpers ----------
+INFILE = "issue_body.md"
+OUT_MD = "report.md"
+OUT_DIR = "reports"
+OUT_CSV = os.path.join(OUT_DIR, "todos.csv")
+
+
+# ---------------------------------------------------------------------------
+# Hilfsfunktionen
+# ---------------------------------------------------------------------------
+
 def read_issue_body() -> str:
-    with open('issue_body.md', 'r', encoding='utf-8') as f:
+    with open(INFILE, "r", encoding="utf-8") as f:
         return f.read()
 
 BODY = read_issue_body()
 
+
 def grab(header: str) -> str:
-    # Abschnitt nach "### <Header>" holen
-    m = re.search(rf"^###\s*{re.escape(header)}\s*$\n(.*?)(?:\n###|\Z)", BODY, flags=re.M|re.S)
-    return (m.group(1).strip() if m else "")
+    """
+    Nimmt die Sektion nach einer Überschrift '### <header>' bis zur nächsten '###' (oder Dateiende).
+    Gibt den Inhalt (ohne Überschrift) getrimmt zurück.
+    """
+    m = re.search(rf"^###\s*{re.escape(header)}\s*$\n(.*?)(?=\n###|\Z)", BODY, flags=re.M | re.S)
+    return m.group(1).strip() if m else ""
 
-def clean(v: str) -> str:
-    return re.sub(r"\n+", " ", (v or "")).strip()
 
-# ---------- Formular-Felder ----------
-site    = clean(grab("Baustelle / Standort"))
-project = clean(grab("Projekt / Bauvorhaben"))
-section = clean(grab("Abschnitt/Bereich"))
-coords  = clean(grab("GPS \\(optional\\)"))
-kind    = clean(grab("Begehungsart"))
-dt      = clean(grab("Datum & Uhrzeit"))
-team    = clean(grab("Beteiligte"))
-weather = clean(grab("Witterung \\(optional\\)"))
-overall = clean(grab("Gesamtbewertung"))
-sign    = clean(grab("Unterschrift/Name Prüfer"))
+def clean_one_line(text: str) -> str:
+    """Auf eine Zeile reduzieren; Pipes escapen (damit Pipe-Table stabil bleibt)."""
+    t = (text or "").strip()
+    t = re.sub(r"\s*\n\s*", " ", t)
+    t = t.replace("|", r"\|")
+    return t
 
-# ---------- Status-Mapping ----------
-def normalize_status(raw: str) -> str:
-    s = (raw or "").strip().lower()
-    if s in ["ok","i. o.","i.o.","io","in ordnung"]: return "ok"
-    if s in ["hinweis","auflage","mittel"]: return "warn"
-    if s in ["mangel","nicht i. o.","nicht i.o.","nicht io","hoch","kritisch"]: return "fail"
-    if s in ["n. a.","n.a.","na","nicht zutreffend","-","–",""]: return "na"
-    return "na"
 
-def status_cell(raw: str) -> str:
-    st   = normalize_status(raw)
-    text = {"ok":"OK","warn":"Hinweis","fail":"Mangel","na":"n.\\,a."}[st]
-    col  = {"ok":"ok","warn":"warn","fail":"fail","na":"na"}[st]
-    return rf"\cellcolor{{{col}}}\textbf{{{text}}}"
+def find_images(text: str):
+    """
+    Markdown-Bilder: ![alt](url)
+    Gibt Liste der URLs zurück.
+    """
+    return re.findall(r'!\[[^\]]*]\(([^)]+)\)', text or "")
 
-# ---------- Checkliste ----------
+
+def norm(v: str) -> str:
+    return (v or "").strip().lower()
+
+
+# ---------------------------------------------------------------------------
+# Stammdaten / Kopf
+# ---------------------------------------------------------------------------
+
+ORT   = clean_one_line(grab("Ort / Baustelle"))
+DATUM = clean_one_line(grab("Datum"))
+SIFA  = clean_one_line(grab("Sifa / Ersteller"))
+WETTER = clean_one_line(grab("Wetterbedingungen"))
+
+if not DATUM:
+    DATUM = date.today().isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Checkliste + Fotos
+# ---------------------------------------------------------------------------
+
 check_labels = [
     "PSA & Zutritt",
     "Ordnung & Sauberkeit",
@@ -56,86 +93,185 @@ check_labels = [
     "Gefahrstoffe / Umweltschutz",
 ]
 
-check_rows = []
-for L in check_labels:
-    s = clean(grab(L))
-    n = clean(grab(L + " – Bemerkungen"))
-    check_rows.append(f"| {L} | {status_cell(s)} | {n or '–'} |")
+# Mapping Bemerkungen-/Foto-Felder (müssen exakt den Labeln aus der Vorlage entsprechen)
+remark_label_of = {
+    "PSA & Zutritt": "PSA & Zutritt – Bemerkungen",
+    "Ordnung & Sauberkeit": "Ordnung & Sauberkeit – Bemerkungen",
+    "Verkehrswege & Absperrungen": "Verkehrswege & Absperrungen – Bemerkungen",
+    "Erdarbeiten / Gräben / Wasserbau": "Erdarbeiten / Gräben / Wasserbau – Bemerkungen",
+    "Gerüste & Leitern": "Gerüste & Leitern – Bemerkungen",
+    "Krane & Hebezeuge / Anschlagmittel": "Krane & Hebezeuge / Anschlagmittel – Bemerkungen",
+    "Maschinen & Geräte (inkl. Teleskopstapler)": "Maschinen & Geräte (inkl. Teleskopstapler) – Bemerkungen",
+    "Elektrik & Beleuchtung": "Elektrik & Beleuchtung – Bemerkungen",
+    "Gefahrstoffe / Umweltschutz": "Gefahrstoffe / Umweltschutz – Bemerkungen",
+}
 
-# ---------- Mängel (ToDo-CSV) ----------
-def defect(n: int):
-    sev = clean(grab(f"Mangel {n} – Schweregrad"))
-    loc = clean(grab(f"Mangel {n} – Ort/Bereich"))
-    desc= clean(grab(f"Mangel {n} – Beschreibung & Maßnahme"))
-    owner=clean(grab(f"Mangel {n} – Verantwortlich"))
-    due = clean(grab(f"Mangel {n} – Frist \\(YYYY-MM-DD\\)"))
-    if any([sev, loc, desc, owner, due]):
-        return (sev, loc, desc, owner, due)
-    return None
+photo_label_of = {
+    "PSA & Zutritt": "PSA & Zutritt – Fotos/Nachweise",
+    "Ordnung & Sauberkeit": "Ordnung & Sauberkeit – Fotos/Nachweise",
+    "Verkehrswege & Absperrungen": "Verkehrswege & Absperrungen – Fotos/Nachweise",
+    "Erdarbeiten / Gräben / Wasserbau": "Erdarbeiten / Gräben / Wasserbau – Fotos/Nachweise",
+    "Gerüste & Leitern": "Gerüste & Leitern – Fotos/Nachweise",
+    "Krane & Hebezeuge / Anschlagmittel": "Krane & Hebezeuge / Anschlagmittel – Fotos/Nachweise",
+    "Maschinen & Geräte (inkl. Teleskopstapler)": "Maschinen & Geräte (inkl. Teleskopstapler) – Fotos/Nachweise",
+    "Elektrik & Beleuchtung": "Elektrik & Beleuchtung – Fotos/Nachweise",
+    "Gefahrstoffe / Umweltschutz": "Gefahrstoffe / Umweltschutz – Fotos/Nachweise",
+}
 
-defects = []
-for i in range(1, 6):   # bei Bedarf erhöhen
-    d = defect(i)
-    if d: defects.append(d)
 
-os.makedirs("reports", exist_ok=True)
-with open("reports/todos.csv","w",newline="",encoding="utf-8") as f:
-    w = csv.writer(f, delimiter=';')
-    w.writerow(["Baustelle","Schweregrad","Ort/Bereich","Beschreibung/Maßnahme","Verantwortlich","Frist"])
-    for sev,loc,desc,owner,due in defects:
-        w.writerow([site or "", sev or "", loc or "", desc or "", owner or "", due or ""])
+def status_cell(val: str) -> str:
+    """
+    Gibt Zelle mit Roh-TeX zurück, damit Pandoc/LaTeX einfärben kann.
+    Erwartete Synonyme:
+      ok → grün
+      hinweis / mittel → gelb
+      mangel / hoch / kritisch → rot
+      na / n.a. / nicht zutreffend / - → grau (na)
+    """
+    v = norm(val)
+    if v in ("ok", "i.o.", "io"):
+        return r"\cellcolor{ok}\textbf{OK}"
+    if v in ("hinweis", "mittel", "warnung", "warn"):
+        return r"\cellcolor{warn} Hinweis"
+    if v in ("mangel", "hoch", "kritisch"):
+        return r"\cellcolor{fail}\textbf{Mangel}"
+    if v in ("na", "n.a.", "nicht zutreffend", "-", "k.a.", "ka", "keine angabe"):
+        return r"\cellcolor{na} n.\,a."
+    # Fallback: roher Text (ohne Farbe)
+    return clean_one_line(val)
 
-# ---------- Markdown-Bericht ----------
-md = []
-md.append("# Begehungsbericht\n")
 
-# Lage/Kopf
-md.append(
-    f"**Baustelle:** {site or '–'}  \n"
-    f"**Projekt:** {project or '–'}  \n"
-    f"**Bereich:** {section or '–'}  \n"
-    f"**GPS:** {coords or '–'}  \n"
-    f"**Begehungsart:** {kind or '–'}  \n"
-    f"**Datum & Uhrzeit:** {dt or '–'}  \n"
-    f"**Beteiligte:** {team or '–'}  \n"
-    f"**Witterung:** {weather or '–'}\n"
-)
+def build_checklist_table() -> str:
+    """
+    Erstellt die Pipe-Table (Kategorie | Status | Bemerkungen) inkl. Header.
+    """
+    lines = []
+    lines.append("**Legende:** (\\cellcolor{ok} OK) (\\cellcolor{warn} Hinweis) (\\cellcolor{fail} Mangel) (\\cellcolor{na} n.,a.)\n")
+    lines.append("### 1.1 Checkliste\n")
+    lines.append("| Kategorie | Status | Bemerkungen |")
+    lines.append("|---|---:|---|")
 
-# Legende schlicht (keine LaTeX-Boxen -> 100% sicher)
-md.append("> **Legende:** ✅ OK · ⚠️ Hinweis · ❌ Mangel · ☐ n. a.")
+    for label in check_labels:
+        status = clean_one_line(grab(label))
+        remark = clean_one_line(grab(remark_label_of[label]))
+        cell = status_cell(status or "")
+        if not remark:
+            remark = "–"
+        lines.append(f"| {label} | {cell} | {remark} |")
 
-# Checkliste
-md.append("\n## Checkliste")
-md.append("| Kategorie | Status | Bemerkungen |")
-md.append("|---|---|---|")
-md.extend(check_rows)
+    return "\n".join(lines)
 
-# Mängel
-md.append("\n## Mängel")
-if defects:
-    md.append("| Schweregrad | Ort/Bereich | Beschreibung & Maßnahme | Verantwortlich | Frist |")
-    md.append("|---|---|---|---|---|")
-    sev_map = {
-        "gering":  r"\cellcolor{ok}\textbf{gering}",
-        "mittel":  r"\cellcolor{warn}\textbf{mittel}",
-        "hoch":    r"\cellcolor{fail}\textbf{hoch}",
-        "kritisch":r"\cellcolor{fail}\textbf{kritisch}",
-    }
-    for sev, loc, desc, owner, due in defects:
-        sev_cell = sev_map.get((sev or "").lower(), sev or "–")
-        md.append(f"| {sev_cell} | {loc or '–'} | {desc or '–'} | {owner or '–'} | {due or '–'} |")
-else:
-    md.append("_Keine Mängel erfasst._")
 
-# Abschluss
-md.append("\n## Abschluss")
-md.append(f"**Gesamtbewertung:** {overall or '–'}  \n**Prüfer:** {sign or '–'}")
+def build_check_photos_blocks() -> str:
+    """
+    Fügt nach der Tabelle je Kategorie einen Fotoblock an (falls Bilder vorhanden).
+    Zwei Bilder pro Zeile, skaliert auf 48% Breite.
+    """
+    blocks = []
+    for label in check_labels:
+        phototext = grab(photo_label_of[label])
+        imgs = find_images(phototext)
+        if not imgs:
+            continue
+        blocks.append(f"#### {label} – Fotos\n")
+        row = []
+        for i, url in enumerate(imgs, 1):
+            row.append(f"![]({url}){{ width=48% }}")
+            if i % 2 == 0:
+                blocks.append(" ".join(row))
+                row = []
+        if row:
+            blocks.append(" ".join(row))
+        blocks.append("")  # Leerzeile
+    return "\n".join(blocks)
 
-front = f"---\ntitle: Baustellenbegehung – {site or 'unbenannt'}\ndate: {date.today().isoformat()}\n---\n\n"
-with open('report.md','w',encoding='utf-8') as f:
-    f.write(front + "\n".join(md))
 
-print("report.md und reports/todos.csv geschrieben.")
+# ---------------------------------------------------------------------------
+# Mängel + ToDo-CSV
+# ---------------------------------------------------------------------------
+
+def build_maengel_and_csv() -> str:
+    """
+    Liest Mängel 1..10 (anpassbar) und schreibt eine Tabelle in den Bericht
+    + CSV (reports/todos.csv) mit Verantwortlichen & Fristen.
+    """
+    os.makedirs(OUT_DIR, exist_ok=True)
+
+    fields = [
+        ("Schweregrad",   "schweregrad"),
+        ("Ort/Bereich",   "ortbereich"),
+        ("Beschreibung & Maßnahme", "beschreibung"),
+        ("Verantwortlich", "verantwortlich"),
+        ("Frist (YYYY-MM-DD)", "frist"),
+    ]
+
+    # CSV vorbereiten
+    with open(OUT_CSV, "w", newline="", encoding="utf-8") as cf:
+        cw = csv.writer(cf, delimiter=";")
+        cw.writerow(["Nr", "Schweregrad", "Ort/Bereich", "Beschreibung/Maßnahme", "Verantwortlich", "Frist"])
+
+        lines = []
+        lines.append("## 1.2 Mängel\n")
+        lines.append("| Nr. | Schweregrad | Ort/Bereich | Beschreibung / Maßnahme | Verantwortlich | Frist |")
+        lines.append("|---:|---|---|---|---|---|")
+
+        row_added = False
+        for i in range(1, 11):  # bis 10 Mängel
+            # Headertexte gemäß Issue-Template:
+            sv = clean_one_line(grab(f"Mangel {i} – Schweregrad"))
+            ob = clean_one_line(grab(f"Mangel {i} – Ort/Bereich"))
+            bm = clean_one_line(grab(f"Mangel {i} – Beschreibung & Maßnahme"))
+            vf = clean_one_line(grab(f"Mangel {i} – Verantwortlich"))
+            fr = clean_one_line(grab(f"Mangel {i} – Frist (YYYY-MM-DD)"))
+
+            # Falls gar nichts gefüllt ist → überspringen
+            if not any([sv, ob, bm, vf, fr]):
+                continue
+
+            row_added = True
+            lines.append(f"| {i} | {sv or '–'} | {ob or '–'} | {bm or '–'} | {vf or '–'} | {fr or '–'} |")
+            cw.writerow([i, sv, ob, bm, vf, fr])
+
+        if not row_added:
+            lines.append("| – | – | – | – | – | – |")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Bericht zusammenbauen
+# ---------------------------------------------------------------------------
+
+def build_markdown() -> str:
+    md = []
+    md.append(f"# Baustellenbegehung\n")
+    md.append(f"**Ort:** {ORT or '–'}  \n**Datum:** {DATUM or '–'}  \n**Sifa/Ersteller:** {SIFA or '–'}")
+    if WETTER:
+        md.append(f"  \n**Wetter:** {WETTER}")
+    md.append("\n")
+
+    # Checkliste
+    md.append(build_checklist_table())
+    md.append("\n")
+    md.append(build_check_photos_blocks())
+    md.append("\n")
+
+    # Mängel + CSV
+    md.append(build_maengel_and_csv())
+
+    return "\n".join(md)
+
+
+def main():
+    os.makedirs(OUT_DIR, exist_ok=True)
+    md = build_markdown()
+    with open(OUT_MD, "w", encoding="utf-8") as f:
+        f.write(md)
+    print(f"Wrote {OUT_MD} and {OUT_CSV}")
+
+
+if __name__ == "__main__":
+    main()
 
 
 
