@@ -176,7 +176,9 @@ jobs:
           PY
 
           python3 send_mail.py
-      - name: Compile TeX → PDF (tectonic)
+          
+          - name: Compile TeX to PDF (tectonic)
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends tectonic
@@ -186,9 +188,9 @@ jobs:
           tectonic --keep-logs --keep-intermediates -o reports "$TEXFILE"
           echo "Reports folder content:"
           ls -l reports
-
+  
       # --- Artefakte hochladen (auch bei Fehlern) ---
-            - name: Upload artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: begehung-${{ steps.meta.outputs.num }}
@@ -196,6 +198,7 @@ jobs:
             reports/debug-*.tex
             reports/*.pdf
             reports/todos.csv
+
 
             if-no-files-found: warn
 
