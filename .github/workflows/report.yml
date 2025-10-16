@@ -177,17 +177,17 @@ jobs:
 
           python3 send_mail.py
           
-          - name: Compile TeX to PDF (tectonic)
+      - name: Compile TeX to PDF (tectonic)
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends tectonic
           TEXFILE=$(ls reports/debug-*.tex | head -n 1)
           echo "Found TeX file: $TEXFILE"
-          # PDF in den Ordner reports ausgeben
           tectonic --keep-logs --keep-intermediates -o reports "$TEXFILE"
           echo "Reports folder content:"
           ls -l reports
+
   
       # --- Artefakte hochladen (auch bei Fehlern) ---
       - name: Upload artifacts
