@@ -178,22 +178,22 @@ jobs:
           python3 send_mail.py
           
      # 1) TeX Live installieren (pdfLaTeX & latexmk)
-- name: Install TeX Live (pdfLaTeX)
-  run: |
-    sudo apt-get update
-    sudo apt-get install -y --no-install-recommends \
-      texlive-latex-recommended texlive-latex-extra \
-      texlive-fonts-recommended texlive-fonts-extra \
-      latexmk
+    - name: Install TeX Live (pdfLaTeX)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          texlive-latex-recommended texlive-latex-extra \
+          texlive-fonts-recommended texlive-fonts-extra \
+          latexmk
 
-# 2) .tex -> PDF kompilieren
-- name: Compile TeX → PDF (latexmk)
-  run: |
-    TEXFILE=$(ls reports/debug-*.tex | head -n 1)
-    echo "Found TeX file: $TEXFILE"
-    latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=reports "$TEXFILE"
-    echo "Generated files:"
-    ls -l reports
+    - name: Compile TeX → PDF (latexmk)
+      run: |
+        TEXFILE=$(ls reports/debug-*.tex | head -n 1)
+        echo "Found TeX file: $TEXFILE"
+        latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=reports "$TEXFILE"
+        echo "Generated files:"
+        ls -l reports
+
 
 
   
