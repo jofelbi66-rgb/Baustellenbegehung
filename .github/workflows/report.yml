@@ -177,16 +177,24 @@ jobs:
 
           python3 send_mail.py
           
-      - name: Compile TeX to PDF (tectonic)
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends tectonic
-          TEXFILE=$(ls reports/debug-*.tex | head -n 1)
-          echo "Found TeX file: $TEXFILE"
-          tectonic --keep-logs --keep-intermediates -o reports "$TEXFILE"
-          echo "Reports folder content:"
-          ls -l reports
+     # 1) TeX Live installieren (pdfLaTeX & latexmk)
+- name: Install TeX Live (pdfLaTeX)
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y --no-install-recommends \
+      texlive-latex-recommended texlive-latex-extra \
+      texlive-fonts-recommended texlive-fonts-extra \
+      latexmk
+
+# 2) .tex -> PDF kompilieren
+- name: Compile TeX → PDF (latexmk)
+  run: |
+    TEXFILE=$(ls reports/debug-*.tex | head -n 1)
+    echo "Found TeX file: $TEXFILE"
+    latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=reports "$TEXFILE"
+    echo "Generated files:"
+    ls -l reports
+
 
   
       # --- Artefakte hochladen (auch bei Fehlern) ---
