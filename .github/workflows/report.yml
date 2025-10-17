@@ -1,41 +1,37 @@
 name: Build Begehungsbericht
 
 on:
-  # Manuell auslösen
+  # Manuell startbar – optional mit Issue-Nummer
   workflow_dispatch:
-
-  # Automatisch bei Änderungen an Checkliste/Daten
-  push:
-    paths:
-      - 'docs/checklist.md'
-      - 'docs/app/**'
-      - 'data/**'
-      - '!README.md'
-
-  # Automatisch wenn Issue das Label "begehung" erhält
+    inputs:
+      issue_number:
+        description: "Issue-Nummer (optional bei manuellem Start)"
+        required: false
+  # Automatisch, wenn ein Label gesetzt wird
   issues:
     types: [labeled]
 
+# Rechte – reicht für Lesen/Schreiben an Issues falls später nötig
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   build:
-    # Dieser Job läuft bei manuellem Start, bei push auf obige Pfade
-    # ODER wenn ein Issue das Label "begehung" bekommt
+    # Nur laufen, wenn manueller Start ODER Label "begehung" gesetzt wurde
     if: >-
-      ${{
-        github.event_name == 'workflow_dispatch' ||
-        github.event_name == 'push' ||
-        (github.event_name == 'issues' &&
-         github.event.action == 'labeled' &&
-         github.event.label.name == 'begehung')
-      }}
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'issues' &&
+           github.event.action == 'labeled' &&
+           github.event.label.name == 'begehung') }}
+
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
-      # --- Meta: Issue-Nummer bestimmen (bei issues vs. manueller Start) ---
+      # --- Meta: Issue-Nummer bestimmen ---
       - name: Resolve issue number
         id: meta
         run: |
@@ -44,56 +40,58 @@ jobs:
           else
             echo "num=${{ inputs.issue_number }}" >> "$GITHUB_OUTPUT"
           fi
-          echo "repo=${{ github.repository }}" >> "$GITHUB_OUTPUT"
-          echo "owner=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
 
-      # --- Issue-Body holen & in Datei schreiben ---
-      - name: Write issue body (from issues event)
-        if: ${{ github.event_name == 'issues' }}
+      - name: Prepare reports folder
+        run: mkdir -p reports
+
+      # --- LaTeX / Pandoc installieren ---
+      - name: Install Pandoc + TeX Live
         run: |
-          cat > issue_body.md <<'EOF'
-          ${{ github.event.issue.body }}
-          EOF
+          sudo apt-get update
+          sudo apt-get install -y \
+            pandoc \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            fonts-lmodern
+          pandoc --version || true
+          pdflatex --version || true
 
-      - name: Fetch issue body (manual run)
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/github-script@v7
-        id: fetch
-        with:
-          result-encoding: string
-          script: |
-            const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
-            const num = parseInt("${{ steps.meta.outputs.num }}", 10);
-            if (!num) {
-              throw new Error("Für den manuellen Start muss 'issue_number' angegeben werden.");
-            }
-            const {data} = await github.rest.issues.get({owner, repo, issue_number: num});
-            return data.body || "";
-      - name: Write fetched body to file
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          printf "%s" "${{ steps.fetch.outputs.result }}" > issue_body.md
-
-      # --- Python + Pandoc + LaTeX installieren ---
-      - name: Install pandoc + LaTeX + Python
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y pandoc python3 \
-            texlive-latex-recommended texlive-latex-extra \
-            texlive-fonts-recommended fonts-lmodern
-
-      # --- Markdown (report.md) & ToDo-CSV erzeugen ---
-      - name: Render markdown from issue (tables, fotos)
-        run: |
-          python3 scripts/render_report.py
-
-      # --- Immer erst .tex erzeugen, dann PDF versuchen ---
-      - name: Build TeX and PDF
+      # --- Markdown erzeugen ---
+      # Nimmt scripts/render_report.py, wenn vorhanden – sonst Fallback auf docs/beispiel-report.md
+      - name: Render markdown from issue (with fallback)
         run: |
           set -e
-          mkdir -p reports
+          if [ -f scripts/render_report.py ]; then
+            echo "Using scripts/render_report.py"
+            python3 scripts/render_report.py "${{ steps.meta.outputs.num }}" > report.md
+          elif [ -f docs/beispiel-report.md ]; then
+            echo "Using fallback docs/beispiel-report.md"
+            cp docs/beispiel-report.md report.md
+          else
+            echo "Fallback: create minimal markdown"
+            echo "# Begehungsbericht" > report.md
+            echo "" >> report.md
+            echo "Kein Renderer gefunden. Dies ist ein Platzhalter." >> report.md
+          fi
+          echo "----- Preview of report.md -----"
+          head -n 50 report.md || true
+          echo "--------------------------------"
 
-          # 1) Debug-LaTeX (.tex) immer erzeugen
+      # --- PDF bauen (Pandoc + LaTeX). Fehler brechen den Build nicht ab ---
+      - name: Build PDF (Pandoc + LaTeX)
+        continue-on-error: true
+        run: |
+          pandoc report.md \
+            --from=markdown+raw_tex+pipe_tables \
+            --template=docs/template.latex \
+            --pdf-engine=pdflatex \
+            --resource-path=".:docs" \
+            -o "reports/begehung-${{ steps.meta.outputs.num }}.pdf"
+
+      # --- Debug: reines TeX exportieren ---
+      - name: Write TeX debug copy
+        run: |
           pandoc report.md \
             --from=markdown+raw_tex+pipe_tables \
             --template=docs/template.latex \
@@ -101,121 +99,19 @@ jobs:
             -t latex \
             -o "reports/debug-${{ steps.meta.outputs.num }}.tex"
 
-          # 2) PDF versuchen – Fehler nicht abbrechen
-          set +e
-          pandoc report.md \
-            --from=markdown+raw_tex+pipe_tables \
-            --template=docs/template.latex \
-            --pdf-engine=pdflatex \
-            --resource-path=".:docs" \
-            -o "reports/begehung-${{ steps.meta.outputs.num }}.pdf"
-          echo "Pandoc exit code: $?"
-          set -e
-
-           # --- E-Mail mit Anhang via Gmail (Python SMTP) ---
-      - name: Send report via Gmail (Python SMTP, mit Anhängen)
-        if: always()
-        env:
-          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          HSE_TO: ${{ secrets.HSE_TO }}
-          ISSUE_NUM: ${{ steps.meta.outputs.num }}
-          REPO: ${{ github.repository }}
-          SERVER_URL: ${{ github.server_url }}
+      # --- Platzhalter: ToDo-CSV (optional) ---
+      - name: Create placeholder ToDo CSV (optional)
         run: |
-          set -e
-          cat > send_mail.py << 'PY'
-          import os, smtplib, ssl, mimetypes
-          from email.message import EmailMessage
+          echo "title,status,remark" > "reports/todos-${{ steps.meta.outputs.num }}.csv"
 
-          server   = os.environ["SMTP_SERVER"]
-          port     = int(os.environ["SMTP_PORT"])
-          user     = os.environ["SMTP_USERNAME"]
-          pwd      = os.environ["SMTP_PASSWORD"]
-          sender   = os.environ["MAIL_FROM"]
-          tos      = [a.strip() for a in os.environ.get("HSE_TO","").split(",") if a.strip()]
-          issue    = os.environ.get("ISSUE_NUM","")
-          repo     = os.environ.get("REPO","")
-          base_url = os.environ.get("SERVER_URL","https://github.com")
-
-          subject = f"Begehungsbericht #{issue}"
-          body = (
-              "Guten Tag,\n\n"
-              f"anbei der Begehungsbericht #{issue}.\n"
-              "Die Datei 'todos.csv' enthält die To-Do-Liste.\n\n"
-              "Issue-Link:\n"
-              f"{base_url}/{repo}/issues/{issue}\n\n"
-              "Viele Grüße\n"
-              "Automatischer HSE-Bericht\n"
-          )
-
-          files = [
-              (f"reports/begehung-{issue}.pdf", "application/pdf"),
-              ("reports/todos.csv", "text/csv"),
-          ]
-
-          msg = EmailMessage()
-          msg["Subject"] = subject
-          msg["From"] = sender
-          msg["To"] = ", ".join(tos)
-          msg.set_content(body)
-
-          for path, fallback in files:
-              if not os.path.exists(path):
-                  print(f"[MAIL] Datei nicht gefunden, wird übersprungen: {path}")
-                  continue
-              ctype, _ = mimetypes.guess_type(path)
-              maintype, subtype = (ctype or fallback).split("/", 1)
-              with open(path, "rb") as f:
-                  data = f.read()
-              msg.add_attachment(data, maintype=maintype, subtype=subtype,
-                                 filename=os.path.basename(path))
-              print(f"[MAIL] Angehängt: {path}")
-
-          ctx = ssl.create_default_context()
-          with smtplib.SMTP(server, port) as smtp:
-              smtp.ehlo()
-              smtp.starttls(context=ctx)
-              smtp.login(user, pwd)
-              smtp.send_message(msg)
-              print("[MAIL] Nachricht gesendet.")
-          PY
-
-          python3 send_mail.py
-          
-     # 1) TeX Live installieren (pdfLaTeX & latexmk)
-    - name: Install TeX Live (pdfLaTeX)
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          texlive-latex-recommended texlive-latex-extra \
-          texlive-fonts-recommended texlive-fonts-extra \
-          latexmk
-
-    - name: Compile TeX → PDF (latexmk)
-      run: |
-        TEXFILE=$(ls reports/debug-*.tex | head -n 1)
-        echo "Found TeX file: $TEXFILE"
-        latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=reports "$TEXFILE"
-        echo "Generated files:"
-        ls -l reports
-
-
-
-  
-      # --- Artefakte hochladen (auch bei Fehlern) ---
+      # --- Artefakte hochladen ---
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: begehung-${{ steps.meta.outputs.num }}
           path: |
-            reports/debug-*.tex
             reports/*.pdf
-            reports/todos.csv
-
-
-            if-no-files-found: warn
-
+            reports/*.tex
+            reports/*.csv
+          if-no-files-found: warn
+          retention-days: 7
