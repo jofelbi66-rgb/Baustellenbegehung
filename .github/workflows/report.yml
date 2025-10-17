@@ -1,26 +1,39 @@
 name: Build Begehungsbericht
 
 on:
+  # Manuell auslösen
   workflow_dispatch:
+
+  # Automatisch bei Änderungen an Checkliste/Daten
+  push:
+    paths:
+      - 'docs/checklist.md'
+      - 'docs/app/**'
+      - 'data/**'
+      - '!README.md'
+
+  # Automatisch wenn Issue das Label "begehung" erhält
   issues:
     types: [labeled]
 
 jobs:
   build:
-    # Manuell starten ODER wenn das Label "begehung" auf ein Issue gesetzt wird
-    if: >
+    # Dieser Job läuft bei manuellem Start, bei push auf obige Pfade
+    # ODER wenn ein Issue das Label "begehung" bekommt
+    if: >-
       ${{
         github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'push' ||
         (github.event_name == 'issues' &&
          github.event.action == 'labeled' &&
          github.event.label.name == 'begehung')
       }}
     runs-on: ubuntu-latest
 
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
 
       # --- Meta: Issue-Nummer bestimmen (bei issues vs. manueller Start) ---
       - name: Resolve issue number
