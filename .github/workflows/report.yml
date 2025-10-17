@@ -2,25 +2,21 @@ name: Build Begehungsbericht
 
 on:
   workflow_dispatch:
-    inputs:
-      issue_number:
-        description: "Issue number (nur bei manuellem Start)"
-        required: false
   issues:
     types: [labeled]
-
-permissions:
-  contents: read
 
 jobs:
   build:
     # Manuell starten ODER wenn das Label "begehung" auf ein Issue gesetzt wird
-    if: >-
-      ${{ github.event_name == 'workflow_dispatch'
-          || (github.event_name == 'issues'
-              && github.event.action == 'labeled'
-              && github.event.label.name == 'begehung') }}
+    if: >
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'issues' &&
+         github.event.action == 'labeled' &&
+         github.event.label.name == 'begehung')
+      }}
     runs-on: ubuntu-latest
+
 
     steps:
       - name: Checkout repository
