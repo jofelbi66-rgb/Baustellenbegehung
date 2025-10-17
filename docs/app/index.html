@@ -120,13 +120,47 @@
 
 <script>
   // -------------------------------------------------------------
-  // 1) Ziel-Endpunkt (Netlify Function)
-  //    -> falls du die Function-URL änderst, hier anpassen:
+  // 1) Ziel-Endpunkt (Netlify Function) – bitte so lassen, das ist deine Function
   const NETLIFY_ENDPOINT =
     "https://baustellenbegehung.netlify.app/.netlify/functions/submit-begehung";
 
+  // --- Kleine UI-Helfer für Statusmeldungen ---------------------
+  function setStatus(msg, type = "info") {
+    let box = document.getElementById("statusBox");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "statusBox";
+      box.style.position = "fixed";
+      box.style.left = "50%";
+      box.style.transform = "translateX(-50%)";
+      box.style.bottom = "16px";
+      box.style.zIndex = "9999";
+      box.style.padding = "10px 14px";
+      box.style.borderRadius = "10px";
+      box.style.boxShadow = "0 2px 10px rgba(0,0,0,.12)";
+      box.style.font = "14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif";
+      box.style.maxWidth = "92vw";
+      box.style.textAlign = "center";
+      document.body.appendChild(box);
+    }
+    const colors = {
+      info:   {bg:"#eff6ff", bd:"#bfdbfe", fg:"#1d4ed8"},
+      ok:     {bg:"#ecfdf5", bd:"#a7f3d0", fg:"#065f46"},
+      warn:   {bg:"#fffbeb", bd:"#fde68a", fg:"#92400e"},
+      err:    {bg:"#fef2f2", bd:"#fecaca", fg:"#991b1b"}
+    }[type] || {bg:"#f1f5f9", bd:"#e2e8f0", fg:"#0f172a"};
+
+    box.style.background = colors.bg;
+    box.style.border = "1px solid " + colors.bd;
+    box.style.color = colors.fg;
+    box.textContent = msg;
+    box.style.display = "block";
+    clearTimeout(box._t);
+    box._t = setTimeout(()=> box.style.display="none", type==="err" ? 7000 : 3500);
+  }
+
   // -------------------------------------------------------------
-  // 2) Kategorien der Checkliste (kannst du hier frei erweitern)
+  // 2) Kategorien der Checkliste (wie gehabt)
   const CATEGORIES = [
     "PSA & Zutritt",
     "Ordnung & Sauberkeit",
@@ -140,9 +174,8 @@
   ];
 
   // -------------------------------------------------------------
-  // 3) UI: Checkliste dynamisch aufbauen
+  // 3) Checkliste aufbauen (unverändert)
   const cl = document.getElementById("checklist");
-
   CATEGORIES.forEach((cat, idx) => {
     const id = "cat_" + idx;
 
@@ -150,12 +183,10 @@
     row.className = "item";
     row.dataset.cat = cat;
 
-    // Linke Spalte: Kategoriename
     const left = document.createElement("div");
     left.innerHTML = `<div class="cat">${cat}</div>`;
     row.appendChild(left);
 
-    // Rechte Spalte: Status-Badges + Bemerkungen + Fotos
     const right = document.createElement("div");
 
     const status = document.createElement("div");
@@ -194,62 +225,48 @@
     remark.dataset.remark = "1";
     right.appendChild(remark);
 
-    const tail = document.createElement("div");
-    tail.className = "tail";
-
-    // Foto-Upload
-    const fileId = "file_" + id;
-    const file = document.createElement("input");
-    file.type = "file";
-    file.accept = "image/*";
-    file.capture = "environment";
-    file.multiple = true;
-    file.id = fileId;
-
-    const fileBtn = document.createElement("label");
-    fileBtn.className = "btn";
-    fileBtn.htmlFor = fileId;
-    fileBtn.textContent = "Fotos aufnehmen / auswählen";
-
-    const photos = document.createElement("div");
-    photos.className = "photos";
-
-    file.addEventListener("change", () => {
-      photos.innerHTML = "";
-      Array.from(file.files).forEach(f => {
-        const url = URL.createObjectURL(f);
-        const img = document.createElement("img");
-        img.className = "ph";
-        img.src = url;
-        photos.appendChild(img);
-      });
-    });
-
-    tail.appendChild(file);
-    tail.appendChild(fileBtn);
-    right.appendChild(tail);
-    right.appendChild(photos);
-
+    // (Fotos/Signatur kommen in Schritt 2/3 dazu)
     row.appendChild(right);
     cl.appendChild(row);
   });
 
   // -------------------------------------------------------------
-  // 4) Submit
+  // 4) Submit-Logik – robust & mit klaren Fehlermeldungen
   document.getElementById("submitBtn").addEventListener("click", async () => {
+    const payload = collectData();
+
+    // Minimale Plausibilität:
+    if (!payload.title) {
+      setStatus("Bitte einen Berichtstitel eingeben.", "warn");
+      return;
+    }
+    if (!payload.datum) {
+      setStatus("Bitte ein Datum wählen.", "warn");
+      return;
+    }
+
+    // Debug-Anzeige (kannst du später entfernen)
+    console.log("Sende Payload:", payload);
+
+    // Senden
     try {
-      const payload = collectData();
+      setStatus("Sende Begehung …", "info");
       const res = await sendBegehung(payload);
-      if(!res.ok){
-        alert("Fehler beim Absenden: " + (res.error || "unbekannt"));
-      }else{
-        alert("Begehung wurde übermittelt! Issue #" + res.number);
-        // optional: Weiterleitung zur Issue-URL
-        if(res.issue) window.open(res.issue, "_blank");
+      if (!res.ok) {
+        setStatus("Fehler: " + (res.error || "unbekannt") , "err");
+        console.error("Function-Fehler:", res);
+        return;
       }
-    } catch(e){
+      setStatus("Begehung übermittelt! (Issue #" + res.number + ")", "ok");
+      // Zeig den Link zum Issue:
+      if (res.issue) {
+        // Button anzeigen:
+        const open = confirm("Bericht erfolgreich erstellt.\nJetzt im Repository öffnen?");
+        if (open) window.open(res.issue, "_blank");
+      }
+    } catch (e) {
+      setStatus("Unerwarteter Fehler: " + e.message, "err");
       console.error(e);
-      alert("Unerwarteter Fehler: " + e.message);
     }
   });
 
@@ -268,11 +285,7 @@
       const cat = row.dataset.cat;
       const status = row.querySelector('input[type=radio]:checked')?.value || "";
       const remark = row.querySelector('input[data-remark]')?.value || "";
-
-      const files = row.querySelector('input[type=file]')?.files || [];
-      const photos = Array.from(files);
-
-      data.categories.push({ cat, status, remark, photosCount: photos.length });
+      data.categories.push({ cat, status, remark });
     });
 
     return data;
@@ -281,19 +294,38 @@
   function getVal(id){ return document.getElementById(id)?.value?.trim() || "" }
 
   async function sendBegehung(payload){
-    // Hinweis:
-    // Hier senden wir nur die Metadaten (Fotos werden im
-    // bestehenden Flow über die Function verarbeitet).
-    const res = await fetch(NETLIFY_ENDPOINT, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify(payload)
-    });
-    if(!res.ok){
-      let txt = await res.text();
-      return { ok:false, error: txt || ("HTTP "+res.status) };
+    // Wichtig: mode:'cors' & explizite Fehlerbehandlung
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000); // 25s Timeout
+
+    try{
+      const res = await fetch(NETLIFY_ENDPOINT, {
+        method: "POST",
+        mode: "cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      // Bei nicht 2xx:
+      if (!res.ok) {
+        let text;
+        try { text = await res.text(); } catch {}
+        return { ok:false, error: text || ("HTTP " + res.status) };
+      }
+
+      // Erwartet: { ok:true, number: <num>, issue: <url> }
+      const json = await res.json();
+      return json;
+    }catch(e){
+      clearTimeout(timeout);
+      if (e.name === "AbortError") {
+        return { ok:false, error:"Zeitüberschreitung (Timeout) beim Senden" };
+      }
+      return { ok:false, error: e.message || "Netzwerkfehler" };
     }
-    return res.json();
   }
 
   // Datum vorbefüllen
