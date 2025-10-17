@@ -56,6 +56,24 @@ jobs:
             fonts-lmodern
           pandoc --version || true
           pdflatex --version || true
+          
+      # --- Issue-Body in Datei schreiben, damit render_report.py ihn findet ---
+      - name: Prepare issue_body.md
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            printf "%s" "${{ github.event.issue.body }}" > issue_body.md
+            echo "Wrote issue_body.md from event.issue.body"
+          elif [ -f docs/beispiel-report.md ]; then
+            cp docs/beispiel-report.md issue_body.md
+            echo "Wrote issue_body.md from docs/beispiel-report.md (manual run)"
+          else
+            echo "# Begehungsbericht" > issue_body.md
+            echo "" >> issue_body.md
+            echo "Kein Issue-Body und keine Beispieldatei verfügbar." >> issue_body.md
+            echo "Wrote minimal issue_body.md placeholder"
+          fi
+          ls -l issue_body.md
 
       # --- Markdown erzeugen ---
       # Nimmt scripts/render_report.py, wenn vorhanden – sonst Fallback auf docs/beispiel-report.md
